@@ -203,10 +203,11 @@ def mkdb (args):
 
         except:
             pass
-    shlog.normal ("create databse : %s" ,args.dbfile)
+    shlog.normal ("create database : %s" ,args.dbfile)
     con = sqlite3.connect(args.dbfile)
-    summaryTable.mkTable(con)
-    instanceTable.mkTable(con)
+    elementsTable.mkTable(con)
+    relationsTable.mkTable(con)
+    propertiesTable.mkTable(con)
     ingestTable.mkTable(con)
     return
 
