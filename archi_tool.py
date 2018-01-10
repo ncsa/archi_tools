@@ -203,54 +203,59 @@ def ingest(args):
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
-        if "nebula" in v :ingest_usage(args, v)
+        if "elements" in v :ingest_elements(args, v) 
+        elif "properties" in v :ingest_properties(args, v)
+        elif "relations" in v :ingest_relations(args, v)
         else:
             shlog.error ("Cannot identify type of %s" % v)
             exit(1)
 
-def ingest_usage(args, csvfile):
-    shlog.normal ("about to open for summary %s",csvfile)
+def ingest_elements(args, csvfile):
+    shlog.normal ("beginning ingest of  %s",csvfile)
     con = sqlite3.connect(args.dbfile)
 
-    row = []
+    rows = []
     with open(csvfile) as fin:
         dr = csv.reader(fin)
-        (text, BeginTime, EndTime)     = next(dr)
-        row.append(BeginTime)
-        row.append(EndTime)
-
-        next(dr) #drop this uuid
-         
-        (text, VCPUHours)              = next(dr)
-        row.append(VCPUHours)
-        
-        (text, ActiveRamMB)            = next(dr)
-        row.append(ActiveRamMB)
-        
-        (text, TotalMemoryUsageHours)  = next(dr)
-        row.append(TotalMemoryUsageHours)
-        
-        (text, TotalDiskGB)           = next(dr)
-        row.append(TotalDiskGB)
-        
-        (text, TotalDiskUsageHours)    = next(dr)
-        row.append(TotalDiskUsageHours)
-        
         hdr = next(dr) # strip header
-        hdr = next(dr) # strip header
-
-        summaryTable.insert(con, [row])
-        ingestTable.insert(con, [[iso_now(),csvfile,'SUMMARY']])
-
-        instances = []
+        
         for row in dr:
-            sql_row = [EndTime]
-            for r in row : sql_row.append(r)
-            shlog.debug("one instance: %s",sql_row)
-            instances.append(sql_row)
-        instanceTable.insert(con, instances)
-        ingestTable.insert(con, [[iso_now(),csvfile,'INSTANCES']])
-            
+            shlog.debug("one element: %s",row)
+            rows.append(row)
+        elementsTable.insert(con, rows)
+        ingestTable.insert(con, [[iso_now(),csvfile,'ELEMENTS']])
+
+def ingest_properties(args, csvfile):
+    shlog.normal ("beginning ingest of  %s",csvfile)
+    con = sqlite3.connect(args.dbfile)
+
+    rows = []
+    with open(csvfile) as fin:
+        dr = csv.reader(fin)
+        hdr = next(dr) # strip header
+        
+        for row in dr:
+            shlog.debug("one element: %s",row)
+            rows.append(row)
+        propertiesTable.insert(con, rows)
+        ingestTable.insert(con, [[iso_now(),csvfile,'PROPERTIES']])
+
+
+def ingest_relations(args, csvfile):
+    shlog.normal ("beginning ingest of  %s",csvfile)
+    con = sqlite3.connect(args.dbfile)
+
+    rows = []
+    with open(csvfile) as fin:
+        dr = csv.reader(fin)
+        hdr = next(dr) # strip header
+        
+        for row in dr:
+            shlog.debug("one element: %s",row)
+            rows.append(row)
+        relationsTable.insert(con, rows)
+        ingestTable.insert(con, [[iso_now(),csvfile,'RELATIONS']])
+
 
     
 ###################################################################
