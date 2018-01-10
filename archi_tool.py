@@ -145,8 +145,8 @@ def iso_now():
 #  Acquire files from the download area
 ##################################################################
 
-VAULT_ROOT= "/Users/donaldp/nebula-tool/csv_vault"
-DOWNLOAD_ROOT = "/Users/donaldp/nebula-tool/Downloads"
+VAULT_ROOT= "/Users/donaldp/archi_tool/model_vault"
+DOWNLOAD_ROOT = "/Users/donaldp/export"
 
 
 def acquire(args):
@@ -154,28 +154,13 @@ def acquire(args):
     # acquire files from the download area into the vault.
     # Replace sucesive generations of CSV for epochs of reporting.
     # a CSV that is larger than the one in the vault is presumed to be newer
-    globs = ["CDR_message_*.csv", "CDR_voice_*.csv"]
-    for g in globs:
-        path = os.path.join(DOWNLOAD_ROOT,g)
-        for download_fn in  glob.glob(path):
-            (nline, date) = csv_info(args, download_fn)
-            cannonical_name_pattern = "(CDR_[a-z]*_[0-9]*).*(.csv)"
-            match = re.search(cannonical_name_pattern, download_fn)
-            cannonical_filename = match.group(1)+match.group(2)
-            (vault_path, vault_file_exists) = vault_info(args, date, cannonical_filename)
-            if vault_file_exists and os.path.getsize(vault_path) > os.path.getsize(download_fn) :
-                # vault file is bigger, hence newer
-                # clean the download area
-                shlog.normal ("unlink %s", download_fn)
-                if not args.noaction: os.unlink(download_fn)
-            else:
-                # ingest into vault
-                shlog.normal ("mv %s to %s", download_fn, vault_path)
-                try :
-                    os.makedirs(os.path.dirname(vault_path))
-                except OSError:
-                    pass
-                if not args.noaction: os.rename(download_fn, vault_path)
+    csvs = ["elements.csv", "properties.csv","relations.csv"]
+    for c in csvs:
+        filename = args.prefix + c
+        download_path = os.path.join(DOWNLOAD_ROOT,filename)
+        vault_path = os.path.join(VAULT_ROOT,filename)
+        shlog.normal ("mv %s to %s", download_path, vault_path)
+        os.rename(download_path, vault_path)
 
 def vault_info(args, date, fn):
     path = os.path.join(VAULT_ROOT, date, fn)
@@ -351,7 +336,8 @@ if __name__ == "__main__":
 
     acquire_parser = subparsers.add_parser('acquire', help="Acquire CSVs from download area into the vault")
     acquire_parser.set_defaults(func=acquire)
-    acquire_parser.add_argument("--noaction", "-n", help="just say what would be done, don't do it", default=False, action='store_true')
+    #acquire_parser.add_argument("--noaction", "-n", help="just say what would be done, don't do it", default=False, action='store_true')
+    acquire_parser.add_argument("--prefix", "-p", help="Prefix given on archimate export", default="Study1_")
 
     args = main_parser.parse_args()
 
