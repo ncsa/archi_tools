@@ -279,26 +279,58 @@ def list(args):
     # Dump signigifact tables (what's in the DB) 
     con = sqlite3.connect(args.dbfile)
     cur = con.cursor()
-    q = "select * from SUMMARY"
-    rows=[]
-    for c in cur.execute (q): rows.append(c)
-    print tabulate.tabulate(rows)
-    q = "select * from INSTANCE"
+    q = "select * from ELEMENTS"
     rows=[]
     for c in cur.execute (q): rows.append(c)
     print tabulate.tabulate(rows)
 
+    q = "select * from RELATIONS"
+    rows=[]
+    for c in cur.execute (q): rows.append(c)
+    print tabulate.tabulate(rows)
+
+    q = "select * from PROPERTIES"
+    rows=[]
+    for c in cur.execute (q): rows.append(c)
+    print tabulate.tabulate(rows)
 
 
-def state(args):
+
+def dependents(args):
     # Print a report summary report for each state
-    body = "MeasureTime,state,count(*),sum(VCPU),sum(RamMB),sum(DiskGB),sum(UsageHours)"
-    #for s in ["Active","Error","Stopped"]:
-    sql = "select %s from INSTANCE Group by MeasureTime, State Order by MeasureTime, State" % (body)
-    answer =(q(args, sql))
-    print tabulate.tabulate(answer, body.split(','))
+    con = sqlite3.connect(args.dbfile)
+    cur = con.cursor()
+    sql = 'select  distinct ID from ELEMENTS where Name  like  "%Archiver Service%"'
+    traverse(args, [r for r in q(args, sql)])
+             
+def traverse(args, serviceID):
+    # for a service, recurvivel follow the path  serviceID -> subordinate Interface -> Subordinate
 
-    
+    #find the relied-on service interfaces stering this servince
+    print "0****servinceID",serviceID
+    sql = '''select distinct Source, Name
+                  from RELATIONS where Target = "%s" and Type = "ServingRelationship"
+          '''  % (serviceID[0])
+    sql = '''select distinct Source, Name
+                  from RELATIONS where Target = "%s" 
+          '''  % (serviceID[0])
+    for (serviceInterfaceID, name) in q(args, sql):
+        print "1** service Interface:",name
+        #get the fundamental service for each of the interfaces.
+        sql = '''select distinct  Source, name
+                  from RELATIONS where Target = "%s" and Type = "CompositionRelationship"
+          '''  % (serviceInterfaceID)
+        for (baseElementID, name) in q(args, sql):
+            
+        # to the elmenet that the main definition of the service
+             print "3***", baseElementID, "((", name, "))"  # print out the current interface
+             sql = 'select distinct Name from ELEMENTS where ID = "%s"'  % (baseElementID)
+             for n in q(args, sql):
+                 print "4*****", n
+
+        
+        
+        
 if __name__ == "__main__":
 
     #main_parser = argparse.ArgumentParser(add_help=False)
@@ -331,10 +363,10 @@ if __name__ == "__main__":
     list_parser.set_defaults(func=list)
     list_parser.add_argument(   "--chr", "-c", help='Chromosome Numbers' , default='1')
 
-    state_parser = subparsers.add_parser('state', help="summary report for machines in various states")
-    state_parser.set_defaults(func=state)
-    state_parser.add_argument(   "--nstates", "-n", help='N state' , type=int, default=15)
-    state_parser.add_argument(   "--after",   "-s", help='after N days '     , type=int, default=1000)
+    dependents_parser = subparsers.add_parser('dependents', help="summary report for machines in various dependentss")
+    dependents_parser.set_defaults(func=dependents)
+    dependents_parser.add_argument(   "--ndependentss", "-n", help='N dependents' , type=int, default=15)
+    dependents_parser.add_argument(   "--after",   "-s", help='after N days '     , type=int, default=1000)
 
     dbinfo_parser = subparsers.add_parser('dbinfo', help="print database summary info")
     dbinfo_parser.set_defaults(func=dbinfo)
