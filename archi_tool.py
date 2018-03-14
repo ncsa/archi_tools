@@ -18,317 +18,26 @@ import os
 import datetime
 import glob
 import sys
+import uuid
 
-def t(x):return x
-def i(x):return int(x)
-def r(x):return float(x)
+def extend(args):
+      """
+      Extend an archimate CSV file for re-import by repliating a prototype line nappend times.
 
-class SQLTable:
-    "lightweight support for database tables"
-    def __init__(self):
-        self.columns   = None  #list of Header keywords as if in  line 1 of CSV
-        self.hfn       = None  #List of ascii converter functions eg t, i f)
-        self.hdt       = None  #list of SQL types for each keyword
-        self.tableName = None # name of the SQL table 
-
-    def check(self):
-        # Check that the required data items are set up consisentlu
-        #shlog.normal("self.columns: %s" % self.columns)
-        #shlog.normal("self.hfn: %s" % self.hfn)
-        #shlog.normal("self.hdt: %s" % self.hdt)
-        #shlog.normal("self.tableName %s" % self.tableName)
-        assert len(self.columns) == len(self.hfm)
-        assert len(self.columns) == len(self.hdt) # Bail if we have made typoss
-        assert self.tableName
-        
-    def mkTable (self, con):
-        #make the schemas for the main database tables
-        # the schema can be loaded with data from subsequent calls of this program.
-        shlog.normal ("create database table : %s" ,args.dbfile)
-        cur = con.cursor()
-        columns = ["%s %s" % (name, dbtype) for (name, dbtype) in zip (self.columns, self.hdt)]
-        columns = (',').join(columns)
-        create_statement = "create table "+ self.tableName + " (" + columns + ')'
-        shlog.normal (create_statement)
-        cur.execute(create_statement)
-        con.commit()
-
-        return
-
-    def insert(self, con, rows):
-        #insert rows of Ascii into the databse table
-        #after applying conversion funcitons.
-        insert_statement = (',').join(["?" for name in self.columns])
-        insert_statement = "insert into " + self.tableName + "  values (" + insert_statement + ")"
-        shlog.verbose (insert_statement)
-        cur = con.cursor()
-        for row in  rows:
-            shlog.debug("insert: %s" % row)
-            #apply convertion functins
-            r= ([f(item) for (item, f) in zip(row, self.hfm)])
-            cur.execute(insert_statement, r ) 
-        con.commit()
-
-# Record Summmary inforation from top of CSVfile.
-elementsTable = SQLTable()
-elementsTable.tableName = "ELEMENTS"
-elementsTable.columns = [  "ID","Type", "Name","Documentation"]
-elementsTable.hfm =     [     t,     t,      t,              t]
-elementsTable.hdt =     ['text','text', 'text',         'text']
-elementsTable.check()
-
-
-#record INgest of each CSV
-ingestTable = SQLTable()
-ingestTable.tableName = "INGEST"
-ingestTable.columns = ['IngestTime', 'File', 'IntoTable']
-ingestTable.hfm =     [           t,       t,          t]
-ingestTable.hdt =     [      'text',  'text',     'text']
-ingestTable.check()
-
-#Properties table
-propertiesTable = SQLTable()
-propertiesTable.tableName = "PROPERTIES"
-propertiesTable.columns = [  'ID','Key','Value']
-propertiesTable.hfm =     [     t,    t,      t]
-propertiesTable.hdt =     ['text','text','text']
-propertiesTable.check()
-
-
-#Relations table
-relationsTable = SQLTable()
-relationsTable.tableName = "RELATIONS"
-relationsTable.columns = ['ID'  ,'Type','Name','Documentation','Source','Target']
-relationsTable.hfm =     [     t,     t,     t,              t,       t,       t]
-relationsTable.hdt =     ['text','text','text',         'text',  'text',  'text']
-relationsTable.check()
-
-def q(args, sql):
-    "common query (allows for logging)"
-    con = sqlite3.connect(args.dbfile)
-    cur = con.cursor()
-    shlog.verbose (sql)
-    result  = cur.execute (sql)
-    return result
-
-###################################################################
-#
-#  functions for time calculations
-#
-##################################################################
-
-
-def iso_datetime(day,hour,offset_from_central_time=0):
-    #convert mm/dd/yyyy to YYYY-MM-DD HH:MM:00.000
-    dayhour =  day + ","  + hour
-    shlog.debug(dayhour)
-    #t = datetime.datetime.strptime(dayhour,"%m/%d/%Y,%I:%M %p %Z")
-    t = datetime.datetime.strptime(dayhour,"%m/%d/%Y,%I:%M %p") + datetime.timedelta(hours = offset_from_central_time) 
-    iso_datetime = datetime.datetime.isoformat(t)
-    shlog.debug(iso_datetime)
-    return iso_datetime
-
-def iso_range(deltaDays, isoLatestDateTime=datetime.datetime.isoformat(datetime.datetime.now())):
-    #return (latest, earliest) ISO date range. Latest data defaults to current time
-    isoLatestDateTime = isoLatestDateTime.split('.')[0]
-    t = datetime.datetime.strptime(isoLatestDateTime,"%Y-%m-%dT%H:%M:%S") + datetime.timedelta(days = -deltaDays)
-    isoEarliestdatetime = datetime.datetime.isoformat(t)
-    return (isoLatestDateTime, isoEarliestdatetime)
-
-def iso_now():
-    return datetime.datetime.isoformat(datetime.datetime.now())
-
-###################################################################
-#
-#  Functions clean and compare and ingest CSV files.
-#
-#  Acquire files from the download area
-##################################################################
-
-VAULT_ROOT= "/Users/donaldp/archi_tool/model_vault"
-DOWNLOAD_ROOT = "/Users/donaldp/export"
-
-
-def acquire(args):
-    import re
-    # acquire files from the download area into the vault.
-    # Replace sucesive generations of CSV for epochs of reporting.
-    # a CSV that is larger than the one in the vault is presumed to be newer
-    csvs = ["elements.csv", "properties.csv","relations.csv"]
-    for c in csvs:
-        filename = args.prefix + c
-        download_path = os.path.join(DOWNLOAD_ROOT,filename)
-        vault_path = os.path.join(VAULT_ROOT,filename)
-        shlog.normal ("mv %s to %s", download_path, vault_path)
-        os.rename(download_path, vault_path)
-
-def vault_info(args, date, fn):
-    path = os.path.join(VAULT_ROOT, date, fn)
-    exists = os.path.isfile(path)
-    return (path, exists)
-
-def vault_ingest(args, path, date, fn):
-    # ingest file 
-    path = os.path.join(VAULT_ROOT, date, fn)
-
-
-###################################################################
-#
-#  functions to make database state,  make tables, and ingest, DB info.
-#
-##################################################################
-
-def mkdb (args):
-    #make the schemas for the main database tables
-    # the schema can be loaded with data from subsequent calls of this program.
-    if args.force:
-        try:
-            os.remove(args.dbfile)
-            shlog.normal ("removed : %s" ,args.dbfile)
-
-        except:
-            pass
-    shlog.normal ("create database : %s" ,args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    elementsTable.mkTable(con)
-    relationsTable.mkTable(con)
-    propertiesTable.mkTable(con)
-    ingestTable.mkTable(con)
-    return
-
-def ingest(args):
-    # ingest everyting in the vault.
-    # LIkely best preceeding a mkdb
-    vault_files = os.path.join(VAULT_ROOT,"*.csv")
-    shlog.normal("looking into vault for %s", vault_files)
-    for v in glob.glob(vault_files):
-        shlog.normal ("processing %s" % v)
-        if "elements" in v :ingest_elements(args, v) 
-        elif "properties" in v :ingest_properties(args, v)
-        elif "relations" in v :ingest_relations(args, v)
-        else:
-            shlog.error ("Cannot identify type of %s" % v)
-            exit(1)
-
-def ingest_elements(args, csvfile):
-    shlog.normal ("beginning ingest of  %s",csvfile)
-    con = sqlite3.connect(args.dbfile)
-
-    rows = []
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        for row in dr:
-            shlog.debug("one element: %s",row)
-            rows.append(row)
-        elementsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'ELEMENTS']])
-
-def ingest_properties(args, csvfile):
-    shlog.normal ("beginning ingest of  %s",csvfile)
-    con = sqlite3.connect(args.dbfile)
-
-    rows = []
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        for row in dr:
-            shlog.debug("one element: %s",row)
-            rows.append(row)
-        propertiesTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'PROPERTIES']])
-
-
-def ingest_relations(args, csvfile):
-    shlog.normal ("beginning ingest of  %s",csvfile)
-    con = sqlite3.connect(args.dbfile)
-
-    rows = []
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        for row in dr:
-            shlog.debug("one element: %s",row)
-            rows.append(row)
-        relationsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'RELATIONS']])
-
-
-    
-###################################################################
-#
-#  reports
-#
-##################################################################
-
-def dbinfo(args):
-    shlog.normal ("about to open %s",args.dbfile)
-    l = []
-    earliest_csv = "SELECT  EndTime FROM SUMMARY ORDER BY EndTime ASC  LIMIT 1"
-    l.append (["Earliest Sample", q(args, earliest_csv).fetchone()[0]])
-
-    latest_csv   = "SELECT  EndTime FROM SUMMARY ORDER BY EndTime DESC LIMIT 1"
-    l.append (["Latest Sample",   q(args, latest_csv  ).fetchone()[0]])
-
-    print tabulate.tabulate(l,["Item","Value"])
-    
-def list(args):
-    # Dump signigifact tables (what's in the DB) 
-    con = sqlite3.connect(args.dbfile)
-    cur = con.cursor()
-    q = "select * from ELEMENTS"
-    rows=[]
-    for c in cur.execute (q): rows.append(c)
-    print tabulate.tabulate(rows)
-
-    q = "select * from RELATIONS"
-    rows=[]
-    for c in cur.execute (q): rows.append(c)
-    print tabulate.tabulate(rows)
-
-    q = "select * from PROPERTIES"
-    rows=[]
-    for c in cur.execute (q): rows.append(c)
-    print tabulate.tabulate(rows)
-
-
-
-def dependents(args):
-    # Print a report summary report for each state
-    con = sqlite3.connect(args.dbfile)
-    cur = con.cursor()
-    sql = 'select  distinct ID from ELEMENTS where Name  like  "%Archiver Service%"'
-    traverse(args, [r for r in q(args, sql)])
-             
-def traverse(args, serviceID):
-    # for a service, recurvivel follow the path  serviceID -> subordinate Interface -> Subordinate
-
-    #find the relied-on service interfaces stering this servince
-    print "0****servinceID",serviceID
-    sql = '''select distinct Source, Name
-                  from RELATIONS where Target = "%s" and Type = "ServingRelationship"
-          '''  % (serviceID[0])
-    sql = '''select distinct Source, Name
-                  from RELATIONS where Target = "%s" 
-          '''  % (serviceID[0])
-    for (serviceInterfaceID, name) in q(args, sql):
-        print "1** service Interface:",name
-        #get the fundamental service for each of the interfaces.
-        sql = '''select distinct  Source, name
-                  from RELATIONS where Target = "%s" and Type = "CompositionRelationship"
-          '''  % (serviceInterfaceID)
-        for (baseElementID, name) in q(args, sql):
-            
-        # to the elmenet that the main definition of the service
-             print "3***", baseElementID, "((", name, "))"  # print out the current interface
-             sql = 'select distinct Name from ELEMENTS where ID = "%s"'  % (baseElementID)
-             for n in q(args, sql):
-                 print "4*****", n
-
-        
+      Code UUID in ther prototype for elements for the cell to be ne a newly generated UUID
+      """
+      csvfile = open(args.csv, 'ab') 
+      prototype = args.prototype.split(",")
+      writer = csv.writer(csvfile, delimiter=',',
+            quotechar='"', quoting=csv.QUOTE_ALL)
+      for lineno in range(args.nappends):
+          line = []
+          for p in prototype:
+              if "UUID" in p :
+                  line.append(uuid.uuid1())
+              else:
+                  line.append(p)
+          writer.writerow(line)
         
         
 if __name__ == "__main__":
@@ -346,39 +55,17 @@ if __name__ == "__main__":
     subparsers = main_parser.add_subparsers(title="subcommands",
                        description='valid subcommands',
                        help='additional help')
-    
 
-    #Subcommand  to ingest csv to sqlite3 db file 
-    mkdb_parser = subparsers.add_parser('mkdb', help="make a new, empty database")
-    mkdb_parser.set_defaults(func=mkdb)
-    mkdb_parser.add_argument("--force", "-f", help="remove existing db file of the same name", default=False, action='store_true')
-
-    
-    #Subcommand  to ingest csv to sqlite3 db file 
-    ingest_parser = subparsers.add_parser('ingest', help="ingest CSV into database")
-    ingest_parser.set_defaults(func=ingest)
-    #ingest_parser.add_argument("csvfile")
-
-    list_parser = subparsers.add_parser('list', help="List the context of the database")
-    list_parser.set_defaults(func=list)
-    list_parser.add_argument(   "--chr", "-c", help='Chromosome Numbers' , default='1')
-
-    dependents_parser = subparsers.add_parser('dependents', help="summary report for machines in various dependentss")
-    dependents_parser.set_defaults(func=dependents)
-    dependents_parser.add_argument(   "--ndependentss", "-n", help='N dependents' , type=int, default=15)
-    dependents_parser.add_argument(   "--after",   "-s", help='after N days '     , type=int, default=1000)
-
-    dbinfo_parser = subparsers.add_parser('dbinfo', help="print database summary info")
-    dbinfo_parser.set_defaults(func=dbinfo)
-
-    acquire_parser = subparsers.add_parser('acquire', help="Acquire CSVs from download area into the vault")
-    acquire_parser.set_defaults(func=acquire)
-    #acquire_parser.add_argument("--noaction", "-n", help="just say what would be done, don't do it", default=False, action='store_true')
-    acquire_parser.add_argument("--prefix", "-p", help="Prefix given on archimate export", default="Study1_")
+    #Subcommand  to extend a archimate-style CSV export file 
+    #extend_parser = subparsers.add_parser('extend', help="Extend an Archimate Entity file ")
+    extend_parser = subparsers.add_parser('extend', help="extend.__doc__")
+    extend_parser.set_defaults(func=extend)
+    extend_parser.add_argument("csv", help="csvfile to append to")
+    extend_parser.add_argument("prototype", help="commaed list that is a protytype.  Use UUID for a new UUID")
+    extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
 
     args = main_parser.parse_args()
-
-
+    
     # translate text arguement to log level.
     # least to most verbose FATAL WARN INFO DEBUG
     # level also printst things to the left of it. 
