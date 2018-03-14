@@ -54,6 +54,10 @@ def header(args):
       csvfile.write(hdr + '\n')
       csvfile.close()
 
+def acquire(args):
+      """Copy CSV files from the export area to the local cache"""
+      shlog.error("Not yet implemented")
+
         
 if __name__ == "__main__":
 
@@ -83,6 +87,11 @@ if __name__ == "__main__":
     header_parser = subparsers.add_parser('header', help="header.__doc__")
     header_parser.set_defaults(func=header)
     header_parser.add_argument("csvtype", help="type of csvfile to make")
+
+    #Acquire files from the working area to the cache
+    acquire_parser = subparsers.add_parser('acquire', help="acquire.__doc__")
+    acquire_parser.set_defaults(func=acquire)
+    acquire_parser.add_argument("--exportdir", help="export directory",default="/Users/donalp/export/" )
 
     args = main_parser.parse_args()
     
