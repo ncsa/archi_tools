@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """
-Acquire archi CSVs frm the Downloads area, into the csv_vailt.
-ingest into archi.db sqllite datbase.
-Print baisic reporting. 
-
+A variety of Tools to assist wiht Archimate Maintenance.
 
 """
 import argparse
@@ -38,7 +35,25 @@ def extend(args):
               else:
                   line.append(p)
           writer.writerow(line)
-        
+
+def header(args):
+      """make a csv file with Just a header"""
+      #import pdb; pdb.set_trace()
+      types = ["elements", "properties","relations"]
+      if args.csvtype not in types :
+            shlog.error("%s is not one of %s" % (args.csvtype, types))
+            exit(1)
+      if args.csvtype == "elements":
+            hdr = '"ID","Type","Name","Documentation"'
+      elif args.csvtype == "properties":
+            hdr = '"ID","Key","Value"'
+      else:
+            #relations
+            hdr = '"ID","Type","Name","Documentation","Source","Target"'
+      csvfile = open(args.prefix + args.csvtype + ".csv", 'w')
+      csvfile.write(hdr + '\n')
+      csvfile.close()
+
         
 if __name__ == "__main__":
 
@@ -48,21 +63,26 @@ if __name__ == "__main__":
      formatter_class=argparse.RawDescriptionHelpFormatter)
     main_parser.add_argument('--loglevel','-l',
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
-                             default="NORMAL")
+                             default="ERROR")
     
     main_parser.add_argument("--dbfile", "-d", default="nebula_stats.db")
+    main_parser.add_argument("--prefix", "-p", default="LSST_")
     main_parser.set_defaults(func=None) #if none then there are  subfunctions    
     subparsers = main_parser.add_subparsers(title="subcommands",
                        description='valid subcommands',
                        help='additional help')
 
     #Subcommand  to extend a archimate-style CSV export file 
-    #extend_parser = subparsers.add_parser('extend', help="Extend an Archimate Entity file ")
     extend_parser = subparsers.add_parser('extend', help="extend.__doc__")
     extend_parser.set_defaults(func=extend)
     extend_parser.add_argument("csv", help="csvfile to append to")
-    extend_parser.add_argument("prototype", help="commaed list that is a protytype.  Use UUID for a new UUID")
+    extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
     extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
+
+    #Subcommand  make an archmate style empty (header only) CSV file
+    header_parser = subparsers.add_parser('header', help="header.__doc__")
+    header_parser.set_defaults(func=header)
+    header_parser.add_argument("csvtype", help="type of csvfile to make")
 
     args = main_parser.parse_args()
     

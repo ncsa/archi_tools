@@ -3,27 +3,22 @@
 This module implments a subset of logging I use for interactive commands.
 
 by default,  not suppressed are NORMAL, WARN and ERROR, meaning:
-    NORMAL is comport messages for the user.
+    NONE: Produce no output
+    NORMAL is comfort messages for the user.
     WARNING is for messages where someting not normal has occurred, but the program continues
     ERROR is for something that is "contract violating" and the program likely needs to termainate
 
 all meassages, including the trio NORMAL, WARNING and ERROR are suppressed by setting 
-the logging level to "NONE" It is not suported that the trio of NORMAL, WARNING and 
+the logging level to "NONE" It is not supported that the trio of NORMAL, WARNING and 
 ERROR  are  suppressed individually.
 
-Concetually orthognal to  the triple of NORMAL, WARN and ERROR is verbosity. 
-This modules provides for  three levels of verbosity.
+Conceptually orthognal to  the triple of NORMAL, WARN and ERROR is verbosity. 
+This modules provides for  three levels of verbosity. the Verbosity levels
+help a user understand the program. DEBUG may produce an overwhelming amount
+of output, perahpsmroe useful for a bug report. 
     VERBOSE
     VVERBOSE 
     DEBUG.
-
-By default no verbosity related message  are printed to stderr.
-
-Configuratons other than default can be obtained by...
-Setting LOGLEVEL to NONE. This suppresses all log messages.
-Setting the level to VERBOSE. This enables VERBOSE to be output in addition to messages when NORMAL is configured. 
-Setting the level to VVERBOSE, This  enables VVERBOSE messages in addition to messages when  VERBOSE is configured.
-Setting the level to DEBUG. This  enables DEBUG messages to be genrated in addition to mesabges when VVERBOSE is generated.
 
 Progess dots:
 
@@ -31,31 +26,36 @@ Certain application benefit from progress dots.  These are dots (or other symbol
 error wihtoug newlines that denote progress in a long computataion. shlog.dot() and shlog.newline 
 are not implemented using the underlying python logging mechansim  They are implemented using writes to stdout. 
 
-Logging of DOTS is currently not suppressible. 
-
-
 """
 import logging
 #
-# redefine log level text and sugar functions apropos for shell commands, not servers. 
-NONE=55
-NORMAL=logging.FATAL+1
-DOTS=logging.FATAL
-VERBOSE=logging.WARNING
-VVERBOSE=logging.INFO
-DEBUG=logging.DEBUG
+# redefine log level text and sugar functions apropos for shell commands, not servers.
+# The underlying scheme is that higher the number the more silent the cose will be.
+#
 
-LEVELDICT = {"NONE": 55,
-             "ERROR" : logging.FATAL,
-             "WARN": logging.FATAL,
-             "NORMAL": logging.FATAL,
-             "DOTS" : logging.FATAL-1,
-             "VERBOSE": logging.WARNING , "VVERBOSE": logging.INFO,
-             "DEBUG": logging.DEBUG}
+NONE=55
+NORMAL=logging.INFO   
+DOTS=logging.FATAL-1       # logging.FATAL is 50 at time of writing  Logging.CRITICAL IS 50
+WARNING=logging.WARNING     # logging.ERROR is 40  "               "  
+ERROR=logging.ERROR     # logging.ERROR is 40  "               "  
+VERBOSE=logging.WARNING  # logging.WARNING is 30 "              "
+VVERBOSE=logging.INFO    # logging.INFO is 20  "               "
+DEBUG=logging.DEBUG      # logging.DEBUG is 10  "             "
+
+
+LEVELDICT = {"NONE": NONE,
+             "NORMAL": NORMAL,
+             "DOTS" : DOTS,
+             "WARN": WARNING,
+             "ERROR" : ERROR,
+             "VERBOSE": VERBOSE ,
+             "VVERBOSE": VVERBOSE,
+             "DEBUG": DEBUG}
 for (levelname, levelno) in LEVELDICT.items():
     logging.addLevelName(levelno, levelname)
 
 # re-using the standard logging gives all the sugar features of the logging modues
+# so create the "shlog.normal" function to be an alias of logging.normal, etc.
 normal = logging.fatal
 verbose = logging.warning
 vverbose = logging.info
@@ -66,23 +66,26 @@ def warn(msg, *args, **kwargs):
 def error(msg, *args, **kwargs):
     logging.log(LEVELDICT["ERROR"], msg, *args, **kwargs)
 
-ROOTLOGGER=None
 def dot(symbol="."):
-    #log progress dots, by default doat are a period (.)
+    #log progress dots, by default dots are a period (.)
     import sys
-    print symbol,
+    loglevel = logging.root.getEffectiveLevel()
+    if loglevel > DOTS : return 
+    #print(symbol, end="", file=sys.stderr)
     
 def newline():
-    #just a newline, useful if last dot is known
+    #just a newline, useful if last dot is known and dots are printed
     import sys
-    print
+    loglevel = logging.root.getEffectiveLevel()
+    if loglevel > DOTS : return 
+    #print("",file=sys.stderr)
 
 def basicConfig(**kwargs):
-    global ROOTLOGGER
-    ROOTLOGGER = logging.basicConfig(**kwargs)
-    return ROOTLOGGER
+    # Call underlying loggger
+    logging.basicConfig(**kwargs)
+    return
 
-helptext = "NONE, NORMAL, NODOTS, VERBOSE, VVERBOSE, DEBUG"
+helptext = "NONE, NORMAL, NDOTS, VERBOSE, VVERBOSE, DEBUG"
 
 if __name__ == "__main__":
 
@@ -100,7 +103,7 @@ if __name__ == "__main__":
 
     basicConfig(level=LEVELDICT[args.loglevel])
 
-    #generate an outout for each maessage
+    #generate an outout for each message
     normal("normal message")
     warn("WARN")
     error("ERROR")
