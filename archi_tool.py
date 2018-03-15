@@ -16,7 +16,7 @@ import datetime
 import glob
 import sys
 import uuid
-
+import shutil
 def extend(args):
       """
       Extend an archimate CSV file for re-import by repliating a prototype line nappend times.
@@ -57,6 +57,10 @@ def header(args):
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
       shlog.error("Not yet implemented")
+      for file in ["elements.csv","relations.csv","parameters.csv"]:
+            ffrom = os.path.join(args.xx,file)
+            fto = os.path.join(cache,file)
+            shutil.copyfile(ffrom, fto)
 
         
 if __name__ == "__main__":
