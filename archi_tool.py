@@ -56,10 +56,9 @@ def header(args):
 
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
-      shlog.error("Not yet implemented")
-      for file in ["elements.csv","relations.csv","parameters.csv"]:
-            ffrom = os.path.join(args.xx,file)
-            fto = os.path.join(cache,file)
+      for file in ["elements.csv","relations.csv","properties.csv"]:
+            ffrom = os.path.join(args.export_area,args.prefix + file)
+            fto = os.path.join(args.cache,args.prefix + file)
             shutil.copyfile(ffrom, fto)
 
         
@@ -95,7 +94,10 @@ if __name__ == "__main__":
     #Acquire files from the working area to the cache
     acquire_parser = subparsers.add_parser('acquire', help="acquire.__doc__")
     acquire_parser.set_defaults(func=acquire)
-    acquire_parser.add_argument("--exportdir", help="export directory",default="/Users/donalp/export/" )
+    acquire_parser.add_argument("--export_area", "-e",
+              help="export directory",default="/Users/donaldp/export/" )
+    acquire_parser.add_argument("--cache", "-c",
+              help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
 
     args = main_parser.parse_args()
     
