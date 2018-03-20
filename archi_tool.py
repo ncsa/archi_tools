@@ -94,7 +94,7 @@ propertiesTable.check()
 
 #record ingests
 ingestTable = SQLTable()
-ingestTable.tableName = 'INGESTs'
+ingestTable.tableName = 'INGESTS'
 ingestTable.columns   =['Time','File','IngestType']
 ingestTable.hfm       =[     t,    t,            t]
 ingestTable.hdt       =['text', 'text',      'text']
@@ -444,7 +444,7 @@ if __name__ == "__main__":
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
                              default="ERROR")
     
-    main_parser.add_argument("--dbfile", "-d", default="nebula_stats.db")
+    main_parser.add_argument("--dbfile", "-d", default="archi_tool.db")
     main_parser.add_argument("--prefix", "-p", default="LSST_")
     main_parser.set_defaults(func=None) #if none then there are  subfunctions    
     subparsers = main_parser.add_subparsers(title="subcommands",
