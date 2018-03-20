@@ -29,7 +29,7 @@ import glob
 import sys
 import uuid
 import shutil
-
+import archi_interface
 
 def t(x):return x
 def i(x):return int(x)
@@ -188,7 +188,7 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(cachepath(args),"*.csv")
+    vault_files = os.path.join(archi_interface.cachepath(args),"*.csv")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
@@ -359,50 +359,6 @@ def header(args):
       csvfile.write(hdr + '\n')
       csvfile.close()
 
-###########################################################
-#
-# Support for acquisition and caching of files so as
-# to gain a stable working environment, as well as
-# moving files to animport back for re-importing
-# into Archi.
-#
-############################################################
-
-
-DOWNLOAD_ROOT = "/Users/donaldp/export"   # hack for now
-VAULT_ROOT= "/Users/donaldp/archi_tool/cache"  # hack for now
-def cachepath(args):
-    """return a path to cache dir appropriate for export prefix
-
-       e.g for prefix DES_ make a cache/DES_ directory if needed
-       and return that path to the caller.
-    """
-    directory = os.path.join(VAULT_ROOT, args.prefix)
-    try:
-            os.stat(directory)
-    except:
-            os.mkdir(directory)
-    return directory
-
-def acquire(args):
-      """Copy CSV files from the export area to the local cache"""
-      for file in ["elements.csv","relations.csv","properties.csv"]: 
-            ffrom = os.path.join(args.export_area,args.prefix + file)
-            fto = os.path.join(cachepath(args),args.prefix + file)
-            shutil.copyfile(ffrom, fto)
-            shlog.normal("cached: %s" % fto)
-      
-###########################################################
-#
-# Support for running archi in obscure modes.
-#
-############################################################
-            
-def debug(args):
-      """run archi with the logger console visible"""
-      import subprocess
-      subprocess.call("/Applications/Archi.app/Contents/MacOS/Archi -console", shell=True,
-                      stdout=sys.stdout, stdin=sys.stdin, stderr=sys.stderr)
 
 ###########################################################
 #
@@ -467,19 +423,7 @@ if __name__ == "__main__":
     header_parser.set_defaults(func=header)
     header_parser.add_argument("csvtype", help="type of csvfile to make")
 
-    #Subcommand  make an emty archiamte v1 databse.
-    debug_parser = subparsers.add_parser('debug', description=debug.__doc__)
-    debug_parser.set_defaults(func=debug)
-    #debug_parser.add_argument("dbfile", help="name of databse file")
-
-    
-    #Acquire files from the working area to the cache
-    acquire_parser = subparsers.add_parser('acquire', description=acquire.__doc__)
-    acquire_parser.set_defaults(func=acquire)
-    acquire_parser.add_argument("--export_area", "-e",
-              help="export directory",default="/Users/donaldp/export/" )
-    acquire_parser.add_argument("--cache", "-c",
-              help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
+    archi_interface.parsers(subparsers)
 
     args = main_parser.parse_args()
 
