@@ -1,6 +1,18 @@
 #!/usr/bin/env python
 """
-A variety of Tools to assist wiht Archimate Maintenance.
+Enable reporting by Load an archimate export into a SQLLITE database
+
+Arhchimate CSV exports consist of three csv files placed into
+an Export area. the CSV's are prefined with an arbitraty prefiix
+(e.g DES_") that is specified within archimate when exporting.
+
+This tool suports
+- Acquiring the csv export in a chace diretory specific
+to the export prefix,
+- Angesting the csvs into a sqliite database specific to
+the export prefix
+- Producing a variaety of reports.
+
 
 """
 import argparse
@@ -505,8 +517,12 @@ if __name__ == "__main__":
               help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
 
     args = main_parser.parse_args()
+
+    # tag the dbfile with the prefix so that we can work on
+    # various models without collision
+    args.dbfile = args.prefix+args.dbfile
     
-    # translate text arguement to log level.
+    # translate text argument to log level.
     # least to most verbose FATAL WARN INFO DEBUG
     # level also printst things to the left of it. 
     loglevel=shlog.__dict__[args.loglevel]
