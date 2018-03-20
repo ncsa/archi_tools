@@ -237,7 +237,7 @@ def ingest_elements(args, csvfile):
                 if len(row) == 1 : continue #pesky line at end --  BRITTLE
                 rows.append(row)
             elementsTable.insert(con, rows)
-            ingestTable.insert(con, [[iso_now(),csvfile,'CONTACTS']])
+            ingestTable.insert(con, [[iso_now(),csvfile,'ELEMENTS']])
                 
     
 def ingest_relations(args, csvfile):
@@ -255,7 +255,7 @@ def ingest_relations(args, csvfile):
             if len(row) == 1 : continue #pesky line at end --  BRITTLE
             rows.append(row)
         relationsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'TEXTS']])
+        ingestTable.insert(con, [[iso_now(),csvfile,'RELATIONS']])
 
                  
 def ingest_properties(args, csvfile):
@@ -273,7 +273,7 @@ def ingest_properties(args, csvfile):
             if len(row) == 1 : continue #pesky line at end --  BRITTLE
             rows.append(row)
         propertiesTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'CALLS']])
+        ingestTable.insert(con, [[iso_now(),csvfile,'PROPERTIES']])
 
     
 ###################################################################
@@ -286,8 +286,18 @@ def dbinfo(args):
     """Print summary information about database content"""
     shlog.normal ("about to open %s",args.dbfile)
     l = []
-    n_contacts   = "SELECT  count(*) FROM ELEMENTS"
-    l.append (["Number of elements ",   q(args, n_contacts).fetchone()[0]])
+    sqls = [
+        ["Number of Elements"  ,"Select count(*) from ELEMENTS"],
+        ["Number of Relations" ,"Select count(*) from RELATIONS"],
+        ["Number of Properties","Select count(*) from PROPERTIES"],
+        ]
+    for item, sql in sqls:
+        l.append ([item,   q(args, sql).fetchone()[0]])
+
+    # now ingest infor from CSV's
+    sql = "Select * from INGESTS"
+    for result in q(args, sql):
+        l.append(["csv",result])
 
     print (tabulate.tabulate(l,["Item","Value"]))
     
