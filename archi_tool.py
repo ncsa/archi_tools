@@ -11,7 +11,7 @@ This tool suports
 to the export prefix,
 - Angesting the csvs into a sqliite database specific to
 the export prefix
-- Producing a variaety of reports.
+- Produce a variety of reports.
 
 
 """
@@ -160,43 +160,6 @@ def iso_range(deltaDays, isoLatestDateTime=datetime.datetime.isoformat(datetime.
 def iso_now():
     return datetime.datetime.isoformat(datetime.datetime.now())
 
-###################################################################
-#
-#  functions clean and compare and ingest CSV files.
-#
-#  Only one pohe number is currently supported
-#  Tr acquire files from the download area
-
-##################################################################
-
-VAULT_ROOT= "/Users/donaldp/archi_tool/cache"
-DOWNLOAD_ROOT = "/Users/donaldp/export"
-
-def csv_cleaned_rows(args, fn):
-    # return rows stripped of headers and annotations, otherwise unaltered.
-    # it turns out that cleaning both text and voice CSV's is the same code.
-    shlog.normal ("about to open %s",fn)
-    with open(fn) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        # build row from csv and csv-constant information
-        rows =[]
-        for row in dr:
-            if not row : continue  #skip blanks 
-            if len(row) == 1 : continue #pesky line at end --  BRITTLE
-            rows.append(row)
-    return rows
-
-def csv_info(args, fn):
-    #return the number of rows and earliest of a CSV as a tuple 
-    #
-    # This allow for coparison and ingest of CSV for a tmobile accumupation period
-    # in genreal we'd want to expunge the data of an older CSV when a newer one is available.
-    rows = csv_cleaned_rows(args, fn)
-    date = rows[-1][0]
-    nrows = len(rows)
-    return (nrows, date)
 
 
 ###################################################################
@@ -404,7 +367,9 @@ def header(args):
 # into Archi.
 #
 ############################################################
-      
+
+
+DOWNLOAD_ROOT = "/Users/donaldp/export"   # hack for now
 VAULT_ROOT= "/Users/donaldp/archi_tool/cache"  # hack for now
 def cachepath(args):
     """return a path to cache dir appropriate for export prefix
