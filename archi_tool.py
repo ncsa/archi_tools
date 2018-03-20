@@ -111,6 +111,7 @@ ingestedTable.check()
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
+    con.text_factory = lambda x: x.decode("utf-8")
     cur = con.cursor()
     shlog.verbose (sql)
     result  = cur.execute (sql)
@@ -212,7 +213,7 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(VAULT_ROOT,"*.csv")
+    vault_files = os.path.join(cachepath(args),"*.csv")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
@@ -300,9 +301,9 @@ def dbinfo(args):
         l.append(["csv",result])
 
     print (tabulate.tabulate(l,["Item","Value"]))
-    
+
 def list(args):
-    """Dump a list of all TEXTS and CALLS Sorted by time """
+    """ """
     con = sqlite3.connect(args.dbfile)
     cur = con.cursor()
     q = "select * from ELEMENTS"
@@ -312,7 +313,39 @@ def list(args):
     print (tabulate.tabulate(rows))
 
 
+def like(args):
+    """print Model elements with a name matching an SQL LIKE string"""
+    sql = """select Id, Type, Name 
+             from ELEMENTS where name  like '%s'
+           """ % args.pattern
+    l = []
+    for (id, type, name) in q(args, sql):
+        name = name.strip()
+        l.append([type, name])
+    print (tabulate.tabulate(l,["Type", "Name"]))
 
+    
+def modelinfo(args):
+    """ Print summry content of the model -- to recall names etc."""
+    
+    sql = """select distinct Type, Count(Type)
+             from ELEMENTS
+             Group by Type Order by Type
+           """
+    print (tabulate.tabulate(q(args,sql),["Element Type","Count"]))
+
+    sql = """select distinct Type, Count(Type)
+             from RELATIONS
+             group by Type Order by Type
+           """
+    print (tabulate.tabulate(q(args,sql),["Relation Type","Count"]))
+
+    sql = """select distinct Key, Value, Count(Value)
+             from PROPERTIES
+             group by Key, Value Order by Key
+           """
+    print (tabulate.tabulate(q(args,sql),["Key","Value","Count"]))
+     
         
 def extend(args):
       """
@@ -351,19 +384,55 @@ def header(args):
       csvfile.write(hdr + '\n')
       csvfile.close()
 
+###########################################################
+#
+# Support for acquisition and caching of files so as
+# to gain a stable working environment, as well as
+# moving files to animport back for re-importing
+# into Archi.
+#
+############################################################
+      
+VAULT_ROOT= "/Users/donaldp/archi_tool/cache"  # hack for now
+def cachepath(args):
+    """return a path to cache dir appropriate for export prefix
+
+       e.g for prefix DES_ make a cache/DES_ directory if needed
+       and return that path to the caller.
+    """
+    directory = os.path.join(VAULT_ROOT, args.prefix)
+    try:
+            os.stat(directory)
+    except:
+            os.mkdir(directory)
+    return directory
+
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
-      for file in ["elements.csv","relations.csv","properties.csv"]:
+      for file in ["elements.csv","relations.csv","properties.csv"]: 
             ffrom = os.path.join(args.export_area,args.prefix + file)
-            fto = os.path.join(args.cache,args.prefix + file)
+            fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
-
-
+            shlog.normal("cached: %s" % fto)
+      
+###########################################################
+#
+# Support for running archi in obscure modes.
+#
+############################################################
+            
 def debug(args):
+      """run archi with the logger console visible"""
       import subprocess
       subprocess.call("/Applications/Archi.app/Contents/MacOS/Archi -console", shell=True,
                       stdout=sys.stdout, stdin=sys.stdin, stderr=sys.stderr)
 
+###########################################################
+#
+# Main program
+#
+############################################################
+      
             
 if __name__ == "__main__":
 
@@ -399,6 +468,15 @@ if __name__ == "__main__":
     
     dbinfo_parser = subparsers.add_parser('dbinfo', help=dbinfo.__doc__)
     dbinfo_parser.set_defaults(func=dbinfo)
+
+    # reasonably detailed list of model summary information
+    modelinfo_parser = subparsers.add_parser('modelinfo', help=modelinfo.__doc__)
+    modelinfo_parser.set_defaults(func=modelinfo)
+
+    # reasonably detailed list of model summary information
+    like_parser = subparsers.add_parser('like', help=like.__doc__)
+    like_parser.set_defaults(func=like)
+    like_parser.add_argument("pattern", help="SQL pattern for matching")
 
     #Subcommand  to extend a archimate-style CSV export file 
     extend_parser = subparsers.add_parser('extend', help="extend.__doc__")
