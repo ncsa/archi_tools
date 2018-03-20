@@ -451,53 +451,53 @@ if __name__ == "__main__":
                        description='valid subcommands',
                        help='additional help')
     #Subcommand  to ingest csv to sqlite3 db file 
-    mkdb_parser = subparsers.add_parser('mkdb', help=mkdb.__doc__)
+    mkdb_parser = subparsers.add_parser('mkdb', description=mkdb.__doc__)
     mkdb_parser.set_defaults(func=mkdb)
     mkdb_parser.add_argument("--force", "-f", help="remove existing db file of the same name", default=False, action='store_true')
 
     
     #Subcommand  to ingest csv to sqlite3 db file 
-    ingest_parser = subparsers.add_parser('ingest', help=ingest.__doc__)
+    ingest_parser = subparsers.add_parser('ingest', description=ingest.__doc__)
     ingest_parser.set_defaults(func=ingest)
     #ingest_parser.add_argument("csvfile")
 
-    list_parser = subparsers.add_parser('list', help=list.__doc__)
+    list_parser = subparsers.add_parser('list', description=list.__doc__)
     list_parser.set_defaults(func=list)
     list_parser.add_argument(   "--chr", "-c", help='Chromosome Numbers' , default='1')
 
     
-    dbinfo_parser = subparsers.add_parser('dbinfo', help=dbinfo.__doc__)
+    dbinfo_parser = subparsers.add_parser('dbinfo', description=dbinfo.__doc__)
     dbinfo_parser.set_defaults(func=dbinfo)
 
     # reasonably detailed list of model summary information
-    modelinfo_parser = subparsers.add_parser('modelinfo', help=modelinfo.__doc__)
+    modelinfo_parser = subparsers.add_parser('modelinfo', description=modelinfo.__doc__)
     modelinfo_parser.set_defaults(func=modelinfo)
 
     # reasonably detailed list of model summary information
-    like_parser = subparsers.add_parser('like', help=like.__doc__)
+    like_parser = subparsers.add_parser('like', description=like.__doc__)
     like_parser.set_defaults(func=like)
     like_parser.add_argument("pattern", help="SQL pattern for matching")
 
     #Subcommand  to extend a archimate-style CSV export file 
-    extend_parser = subparsers.add_parser('extend', help="extend.__doc__")
+    extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
     extend_parser.set_defaults(func=extend)
     extend_parser.add_argument("csv", help="csvfile to append to")
     extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
     extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
 
     #Subcommand  make an archmate style empty (header only) CSV file
-    header_parser = subparsers.add_parser('header', help="header.__doc__")
+    header_parser = subparsers.add_parser('header', description=header.__doc__)
     header_parser.set_defaults(func=header)
     header_parser.add_argument("csvtype", help="type of csvfile to make")
 
     #Subcommand  make an emty archiamte v1 databse.
-    debug_parser = subparsers.add_parser('debug', help="debug.__doc__")
+    debug_parser = subparsers.add_parser('debug', description=debug.__doc__)
     debug_parser.set_defaults(func=debug)
     #debug_parser.add_argument("dbfile", help="name of databse file")
 
     
     #Acquire files from the working area to the cache
-    acquire_parser = subparsers.add_parser('acquire', help="acquire.__doc__")
+    acquire_parser = subparsers.add_parser('acquire', description=acquire.__doc__)
     acquire_parser.set_defaults(func=acquire)
     acquire_parser.add_argument("--export_area", "-e",
               help="export directory",default="/Users/donaldp/export/" )
