@@ -61,7 +61,25 @@ def acquire(args):
             fto = os.path.join(args.cache,args.prefix + file)
             shutil.copyfile(ffrom, fto)
 
-        
+def mkdb(args):
+      """Make an empty archiamte V1 sqllite database """
+      import subprocess
+      dbfile = os.path.abspath(args.dbfile)
+      schemafile = open('sqlite.schema','r')
+      status = subprocess.call('sqlite3 %s' % dbfile,
+                 shell=True, stdin=schemafile, stderr=sys.stderr)
+      if status == 0 :
+            shlog.normal(dbfile)
+      else:
+            #assume errors are printed
+            exit(status)
+
+def debug(args):
+      import subprocess
+      subprocess.call("/Applications/Archi.app/Contents/MacOS/Archi -console", shell=True,
+                      stdout=sys.stdout, stdin=sys.stdin, stderr=sys.stderr)
+
+            
 if __name__ == "__main__":
 
     #main_parser = argparse.ArgumentParser(add_help=False)
@@ -91,6 +109,12 @@ if __name__ == "__main__":
     header_parser.set_defaults(func=header)
     header_parser.add_argument("csvtype", help="type of csvfile to make")
 
+    #Subcommand  make an emty archiamte v1 databse.
+    debug_parser = subparsers.add_parser('debug', help="debug.__doc__")
+    debug_parser.set_defaults(func=debug)
+    #debug_parser.add_argument("dbfile", help="name of databse file")
+
+    
     #Acquire files from the working area to the cache
     acquire_parser = subparsers.add_parser('acquire', help="acquire.__doc__")
     acquire_parser.set_defaults(func=acquire)
