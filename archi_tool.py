@@ -30,6 +30,7 @@ import sys
 import uuid
 import shutil
 import archi_interface
+import conventions
 
 def t(x):return x
 def i(x):return int(x)
@@ -62,7 +63,6 @@ class SQLTable:
         shlog.normal (create_statement)
         cur.execute(create_statement)
         con.commit()
-
         return
 
     def insert(self, con, rows):
@@ -198,7 +198,11 @@ def ingest(args):
         else:
             shlog.error ("Cannot identify type of %s" % v)
             exit(1)
-    
+            
+    #make tables from other modules
+    import pdb; pdb.set_trace()    
+    conventions.mkTables(args)
+        
 def ingest_elements(args, csvfile):
         shlog.normal ("about to open %s",csvfile)
         con = sqlite3.connect(args.dbfile)
@@ -360,12 +364,12 @@ def header(args):
       csvfile.close()
 
 
-def depends(args):
+def mkserving(args):
     """ Build a table of the form  AC I servbyAC where the
     AC is served by AC over I."""
 
     #Get the Application components that are served by an interface
-    sql1 = """
+    served = """
     select R1.target, R1.source, E1.name,  E1.id  
                from relations R1
             JOIN 
@@ -375,7 +379,7 @@ def depends(args):
 
     """
     #get the application components that provide the interface
-    sql2 = """
+    providing_service = """
     select R2.Target, R2.Source, E2.name,  E2.id 
                from relations R2
             JOIN 
@@ -384,15 +388,22 @@ def depends(args):
               and R2.type = 'CompositionRelationship'
      """
 
-    sql = """  select R1.ID, R1.name,  R2.ID, R2.name  from
-        (%s) R1
-        JOIN
-        (%s) R2
-        on R2.target = R1.source 
+    sql = """  CREATE TABLE
+                  Serving AS
+               SELECT
+                   R1.name  Served_Name,
+                   R1.id    Served_ID,
+                   R2.name  Serving_name,
+                   R2.id    Serving_ID
+                 FROM
+                   (%s) R1
+                 JOIN
+                   (%s) R2
+                 ON R2.target = R1.source 
 
-    """ % (sql1, sql2)
+    """ % (served, providing_service)
 
-    print(tabulate.tabulate(q(args, sql)))
+    print(tabulate.tabulate(q(args, sql),["service", "Supported by"]))
 ###########################################################
 #
 # Main program
@@ -440,8 +451,8 @@ if __name__ == "__main__":
     modelinfo_parser.set_defaults(func=modelinfo)
 
     # Print dependency information.
-    depends_parser = subparsers.add_parser('depends', description=depends.__doc__)
-    depends_parser.set_defaults(func=depends)
+    mkserving_parser = subparsers.add_parser('mkserving', description=mkserving.__doc__)
+    mkserving_parser.set_defaults(func=mkserving)
 
     # reasonably detailed list of model summary information
     like_parser = subparsers.add_parser('like', description=like.__doc__)
