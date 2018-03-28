@@ -360,6 +360,39 @@ def header(args):
       csvfile.close()
 
 
+def depends(args):
+    """ Build a table of the form  AC I servbyAC where the
+    AC is served by AC over I."""
+
+    #Get the Application components that are served by an interface
+    sql1 = """
+    select R1.target, R1.source, E1.name,  E1.id  
+               from relations R1
+            JOIN 
+                Elements E1 on R1.Target = E1.ID
+            where E1.type = 'ApplicationComponent'
+              and R1.type = 'ServingRelationship'
+
+    """
+    #get the application components that provide the interface
+    sql2 = """
+    select R2.Target, R2.Source, E2.name,  E2.id 
+               from relations R2
+            JOIN 
+                Elements E2 on R2.Source = E2.ID
+            where E2.type = 'ApplicationComponent'
+              and R2.type = 'CompositionRelationship'
+     """
+
+    sql = """  select R1.ID, R1.name,  R2.ID, R2.name  from
+        (%s) R1
+        JOIN
+        (%s) R2
+        on R2.target = R1.source 
+
+    """ % (sql1, sql2)
+
+    print(tabulate.tabulate(q(args, sql)))
 ###########################################################
 #
 # Main program
@@ -405,6 +438,10 @@ if __name__ == "__main__":
     # reasonably detailed list of model summary information
     modelinfo_parser = subparsers.add_parser('modelinfo', description=modelinfo.__doc__)
     modelinfo_parser.set_defaults(func=modelinfo)
+
+    # Print dependency information.
+    depends_parser = subparsers.add_parser('depends', description=depends.__doc__)
+    depends_parser.set_defaults(func=depends)
 
     # reasonably detailed list of model summary information
     like_parser = subparsers.add_parser('like', description=like.__doc__)
