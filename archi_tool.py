@@ -200,8 +200,7 @@ def ingest(args):
             exit(1)
             
     #make tables from other modules
-    import pdb; pdb.set_trace()    
-    conventions.mkTables(args)
+    conventions.mkTables(args)  #modeling conventions
         
 def ingest_elements(args, csvfile):
         shlog.normal ("about to open %s",csvfile)
@@ -363,47 +362,6 @@ def header(args):
       csvfile.write(hdr + '\n')
       csvfile.close()
 
-
-def mkserving(args):
-    """ Build a table of the form  AC I servbyAC where the
-    AC is served by AC over I."""
-
-    #Get the Application components that are served by an interface
-    served = """
-    select R1.target, R1.source, E1.name,  E1.id  
-               from relations R1
-            JOIN 
-                Elements E1 on R1.Target = E1.ID
-            where E1.type = 'ApplicationComponent'
-              and R1.type = 'ServingRelationship'
-
-    """
-    #get the application components that provide the interface
-    providing_service = """
-    select R2.Target, R2.Source, E2.name,  E2.id 
-               from relations R2
-            JOIN 
-                Elements E2 on R2.Source = E2.ID
-            where E2.type = 'ApplicationComponent'
-              and R2.type = 'CompositionRelationship'
-     """
-
-    sql = """  CREATE TABLE
-                  Serving AS
-               SELECT
-                   R1.name  Served_Name,
-                   R1.id    Served_ID,
-                   R2.name  Serving_name,
-                   R2.id    Serving_ID
-                 FROM
-                   (%s) R1
-                 JOIN
-                   (%s) R2
-                 ON R2.target = R1.source 
-
-    """ % (served, providing_service)
-
-    print(tabulate.tabulate(q(args, sql),["service", "Supported by"]))
 ###########################################################
 #
 # Main program
@@ -449,10 +407,6 @@ if __name__ == "__main__":
     # reasonably detailed list of model summary information
     modelinfo_parser = subparsers.add_parser('modelinfo', description=modelinfo.__doc__)
     modelinfo_parser.set_defaults(func=modelinfo)
-
-    # Print dependency information.
-    mkserving_parser = subparsers.add_parser('mkserving', description=mkserving.__doc__)
-    mkserving_parser.set_defaults(func=mkserving)
 
     # reasonably detailed list of model summary information
     like_parser = subparsers.add_parser('like', description=like.__doc__)
