@@ -6,7 +6,8 @@ Concerns:
 
 1) Maintenance of Cache Directory structure.
 2) Ingest CSV files exported frmo  Archimate to CSV cache.
-3) RUn ARchimate in consoe log mode.
+3) Run Archimate in console log mode.
+4) Clean the Archicamate XML fie taht remembers every Archimate file you ever opened.
 
 Future -- Move CSVs to import area,
 
@@ -76,6 +77,16 @@ def debug(args):
       subprocess.call("/Applications/Archi.app/Contents/MacOS/Archi -console", shell=True,
                       stdout=sys.stdout, stdin=sys.stdin, stderr=sys.stderr)
 
+def forget(args):
+    """Clean the file that remembers all the archimate files you ever opened"""
+    file = os.path.join(os.environ["HOME"],
+                        "Library/Application Support/Archi4/models.xml")
+
+    if os.path.isfile(file):
+        shlog.normal("deleting: %s" % file)
+        os.remove(file)
+    else:
+        shlog.normal("%s did not exist" %  file)
 ###########################################################
 #
 # Support for Legacy CSV maniputipns. in
@@ -143,3 +154,8 @@ def parsers(subparsers):
               help="export directory",default="/Users/donaldp/export/" )
     acquire_parser.add_argument("--cache", "-c",
               help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
+
+    #Forget all Archimate modles, allow for a clean start of archiante
+    forget_parser = subparsers.add_parser('forget', description=forget.__doc__)
+    forget_parser.set_defaults(func=forget)
+
