@@ -8,7 +8,6 @@ Concerns:
 2) Ingest CSV files exported frmo  Archimate to CSV cache.
 3) Run Archimate in console log mode.
 4) Clean the Archicamate XML fie taht remembers every Archimate file you ever opened.
-
 Future -- Move CSVs to import area,
 
 Retain some CSV manupulation functions for archimate
@@ -28,7 +27,7 @@ import glob
 import sys
 import uuid
 import shutil
-
+import re
 
 ###########################################################
 #
@@ -42,6 +41,12 @@ import shutil
 
 DOWNLOAD_ROOT = "/Users/donaldp/export"   # hack for now
 VAULT_ROOT= "/Users/donaldp/archi_tool/cache"  # hack for now
+
+def cleanxml(args):
+    purge='xmlns="http://www.opengroup.org/xsd/archimate/3.0/"'
+    # This needs to be inserted with HREF filled out. 
+    insert='<?xml-stylesheet type="text/xsl" href="/Users/donaldp/export/LSST.xsl"?>'
+    return
 
 def cachepath(args):
     """return a path to cache dir appropriate for export prefix
@@ -64,7 +69,38 @@ def acquire(args):
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s" % fto)
-      
+
+def acquire_openx(args):
+    """ Copy open exchange format CSV to cache, then "fix" it
+
+    NOTE: This procedure assumes the openexchange file is
+    called  <PREFIX>openexchange.xml, eg DES_openexchange.xml
+    in the export area.
+
+    This procedure also "fixes" things needed to process
+    the file via XSLT -- remove a line that seems to
+    break XSLT processing, and adding an static line
+    for rendering.  These features need to be exercised.
+    """
+    fn = args.prefix + "openexchange.xml"
+    ffrom = os.path.join(args.export_area,fn)
+    fto = os.path.join(cachepath(args),fn)
+    shutil.copyfile(ffrom, fto)
+    shlog.normal("cached ffom: %s to %s"  % (ffrom,fto))
+    f = open(fto,'r')
+    ff = open("dog.xml","wb")
+    lineno = 0
+
+    # Read in file and apply "fixes"
+    for line in f.readlines():
+        lineno  += 1
+        #add a static XSLT line
+        if lineno == 1 : line = line + '<?xml-stylesheet type="text/xsl" href="/Users/donaldp/export/LSST.xsl"?>'
+        # This text needs to be removed for XSLT to work (never understood why)
+        line=line.replace('xmlns="http://www.opengroup.org/xsd/archimate/3.0/"','')
+        print (line)
+        ff.write(line)
+
 ###########################################################
 #
 # Support for running archi in obscure modes.
@@ -135,7 +171,7 @@ def header(args):
 
 ###########################################################
 #
-# Declarw Parser for command line visible routines
+# Declare Parser for command line visible routines
 #
 ############################################################
       
@@ -153,6 +189,14 @@ def parsers(subparsers):
     acquire_parser.add_argument("--export_area", "-e",
               help="export directory",default="/Users/donaldp/export/" )
     acquire_parser.add_argument("--cache", "-c",
+              help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
+
+    #Acquire_Openx files from the working area to the cache
+    acquire_openx_parser = subparsers.add_parser('acquire_openx', description=acquire_openx.__doc__)
+    acquire_openx_parser.set_defaults(func=acquire_openx)
+    acquire_openx_parser.add_argument("--export_area", "-e",
+              help="export directory",default="/Users/donaldp/export/" )
+    acquire_openx_parser.add_argument("--cache", "-c",
               help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
 
     #Forget all Archimate modles, allow for a clean start of archiante
