@@ -38,8 +38,9 @@ def q(args, sql):
 def mkTables(args):
     "Build tables at ingest time"
     
+    mk_requirements(args)
     mkserving(args) 
-
+    
 def mkserving(args):
     """
     Build a table, SERVING, that compiles the relationship of one application component
@@ -48,7 +49,7 @@ def mkserving(args):
 
     interface component.  The SERVING TABLE will allow a recursive query discovering
     the chain of service dependencies.
- """
+    """
 
     # ok I know this seems baroque. It too some time for a newbie to figure this
     # large Join out, since it is a join of joins. composing the query from other
@@ -91,6 +92,36 @@ def mkserving(args):
     shlog.normal ("Making service associative table ")
     q(args, sql)
 
+def mk_requirements(args):
+    """
+    Build a table, SERVING, that compiles the relationship of one application component
+    providing servince to another  application component. Thsi table Hides the fact
+    that in the modeling tool this relationship is expressed though an application
+    interface component.  The SERVING TABLE will allow a recursive query discovering
+    the chain of service dependencies.
+    """
+    # Get the flattened list of requirements,
+    # Recording any aggrigating requirement.
+    sql = """
+        SELECT
+          target collection, source requirements
+        FROM relations
+        JOIN Elements esource on esource.id = Relations.source
+             AND esource.Type ='Requirement'
+             AND Relations.type = 'CompositionRelationship'
+        JOIN Elements etarget on etarget.id = Relations.target
+             AND etarget.Type = 'Requirement'
+             AND Relations.type = 'CompositionRelationship'
+         """
+    #Get the Application Components that realize a requirement
+    pass
+    sql = """
+         SELECT  source, target
+         FROM  relationships
+         WHERE type = 'RealizationRelationship'
+         JOIN ON Elements
+         JOIN ON Elements 
+    """
 def parsers(subparsers):
     """
     make any visible command line subcommands from this module
