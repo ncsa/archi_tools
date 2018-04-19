@@ -11,6 +11,8 @@ Application Component of type "interface".
 import argparse
 import sqlite3
 import shlog
+import tabulate
+
 
 ######################################################
 #
@@ -94,34 +96,48 @@ def mkserving(args):
 
 def mk_requirements(args):
     """
-    Build a table, SERVING, that compiles the relationship of one application component
-    providing servince to another  application component. Thsi table Hides the fact
-    that in the modeling tool this relationship is expressed though an application
-    interface component.  The SERVING TABLE will allow a recursive query discovering
-    the chain of service dependencies.
+    Build a table, REQUIREMENTS, that compiles the relationship of one application component
+    providing servince to each componet requirement of a master requirement.
+    The REQUIREMENTS  provides an asscoaiteve tabel fo master requiremetes an deteiled requiremetns
     """
     # Get the flattened list of requirements,
     # Recording any aggrigating requirement.
+    # Reference ID is how an application element or a Nod referes to a requirement
+    # Detail_is is the ID that cariies the detailof the requirement.
+    # the tabel flattens out  a master requirememtn  "stuff all services do" into  the numerous details all do.
+    sql = """
+        CREATE TABLE
+           requirements AS  
+        SELECT
+          master.name  Reference_name,
+          master.id    Reference_id,
+          part.name    Detail_name,
+          part.id      Detail_id
+        FROM elements part
+        JOIN Relations composition ON part.id   = composition.target
+        JOIN elements master       ON master.id = composition.source
+        AND  master.Type = 'Requirement'
+        AND  composition.Type = 'CompositionRelationship'
+        AND  part.Type   = 'Requirement'
+         """
+    q(args,sql)
+
+    #
+    # Now go add singletone requiirements.
+    # these have no attached compostion relationship
     sql = """
         SELECT
-          target collection, source requirements
-        FROM relations
-        JOIN Elements esource on esource.id = Relations.source
-             AND esource.Type ='Requirement'
-             AND Relations.type = 'CompositionRelationship'
-        JOIN Elements etarget on etarget.id = Relations.target
-             AND etarget.Type = 'Requirement'
-             AND Relations.type = 'CompositionRelationship'
-         """
-    #Get the Application Components that realize a requirement
-    pass
-    sql = """
-         SELECT  source, target
-         FROM  relationships
-         WHERE type = 'RealizationRelationship'
-         JOIN ON Elements
-         JOIN ON Elements 
+           req.name  Reference_name,
+           req.id    Reference_id,
+           req.name  Detail_name,
+           req.id    Detail_id
+        FROM elements req
+        WHERE id in
+            (SELECT target FROM Relations r where r.type = 'RealizationRelationship') 
+         AND req.type = 'Requirement'
     """
+    q(args, sql)
+    
 def parsers(subparsers):
     """
     make any visible command line subcommands from this module
