@@ -137,13 +137,44 @@ def mk_requirements(args):
          AND req.type = 'Requirement'
     """
     q(args, sql)
+
+
+def x_relationships(args):
+    """
+    Make an expanded relationships table is flattened and also is restriected to relationship
+    types supporrted for CSV export
+    """
     
+    sql = """
+           SELECT
+             relations.source, relations.target, relations.type, e1.name, e2.name
+           FROM
+            relations
+          JOIN  elements e1
+            ON (e1.id = relations.source)
+          JOIN  elements e2
+          ON (e2.id = relations.target)
+          AND
+             (e1.type = "ApplicationComponent" AND relations.type = "CompositionRelationship" AND e2.type = "ApplicationInterface")
+          OR
+             (e1.type = "ApplicationComponent" AND relations.type = "ServingRelationship" AND e2.type = "ApplicationInterface")
+          OR
+             (e1.type = "ApplicationComponent" AND relations.type = "RealizationRelationship" AND e2.type = "Requirement")
+          OR
+             (e1.type = "Requirement" AND relations.type = "CompositionRelationship" AND e2.type = "Requirement")
+
+    """
+    import sys
+    import csv
+    out = csv.writer(sys.stdout)
+    out.writerows(q(args,sql))
+
 def parsers(subparsers):
     """
     make any visible command line subcommands from this module
     """ 
-    #Subcommand  make an emty archiamte v1 databse.
-    #debug_parser = subparsers.add_parser('debug', description=debug.__doc__)
-    #debug_parser.set_defaults(func=debug)
-    #debug_parser.add_argument("dbfile", help="name of databse file")
+
+    x_relationships_parser = subparsers.add_parser('x_relationships', description=x_relationships.__doc__)
+    x_relationships_parser.set_defaults(func=x_relationships)
+    #x_relationships_parser.add_argument("dbfile", help="name of databse file")
 

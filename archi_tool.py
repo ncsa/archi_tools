@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 """
-Enable reporting by Load an archimate export into a SQLLITE database
+Enable reporting and use of archimate data by Load an archimate
+csv export into a SQLLITE database.
 
-Arhchimate CSV exports consist of three csv files placed into
+Archimate CSV exports consist of three csv files placed into
 an Export area. the CSV's are prefined with an arbitraty prefiix
 (e.g DES_") that is specified within archimate when exporting.
 
 This tool suports
-- Acquiring the csv export in a chace diretory specific
+- Acquiring the csv export in a cached  diretory specific
 to the export prefix,
-- Angesting the csvs into a sqliite database specific to
-the export prefix
+- Ingesting the csv files  into a sqliite database specific
+to the export prefix.
+- Dervice some tables in the database to faciltate the reporting
+and tool chain use.
 - Produce a variety of reports.
 
 
@@ -426,6 +429,7 @@ if __name__ == "__main__":
     header_parser.add_argument("csvtype", help="type of csvfile to make")
 
     archi_interface.parsers(subparsers)
+    conventions.parsers(subparsers)
 
     args = main_parser.parse_args()
 
