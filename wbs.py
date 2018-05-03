@@ -1,21 +1,17 @@
 #!/usr/bin/env python
 """
-Process an archi .archimate xml into a wbs on standard out.
+Process an archi .archimate xml into a wbs printed
+on standard out.
 
 This is a stand-alone tool to generate a
 wbs from a .archimate file.
 
 The current processing extracts information from the
-folder heierachy, includign decriptions associated
+folder hierarchy, including descriptions associated
 with the folder.
 
 Additional information is generated form information
-latent in the folder heirarchy. (e.g. wbs numbers)
-
-This information is loaded into a relational database.
-to be access by extraction tools,  an example extration
-tool woould be  .csv representing a first cut WBS for
-a project manager.
+latent in the folder hierarchy. (e.g. wbs numbers)
 
 It would be preferable to process an archimate
 standard openexchange file instead of the
@@ -24,8 +20,8 @@ The .archimate xml file is processed instead of the
 arichimate standard openexchange file because the
 descriptions associated with folders did not seem
 to be exported via the openexcahange format.
-Exporting descritions seem to quite useful in
-artifacts generated for downstream toolchains.
+Exporting descriptions seem to quite useful in
+artifacts generated for downstream tool chains.
 
 """
 
@@ -41,9 +37,9 @@ class folderinfo :
     """
     The folderinfo class holds all data extracted from a
     folder as well as data computed per-folder using the
-    folder hierarchey (e.g the wbs). n.b currnetly not
+    folder hierarchy (e.g the wbs). n.b currently not
     all data associated with a folders is extracted, for
-    example archimate entitiesin a folder are not extracted.
+    example archimate entities in a folder are not extracted.
     """
 
     HEADER = ["wbs","name","id","documentation"]
@@ -74,9 +70,9 @@ def wbs(element, wbslist, depth):
 
     In the current archimante (4.2.0) version 
     Each top level archimate folder is is a <folder>
-    just uner the xml rool.  <folders> may contain
+    just under the xml root.  <folders> may contain
     <folders>,  Folders man contain an optional
-    <documentation> entity. <folders> constain
+    <documentation> entity. <folders> contain
     items id and name. e.g.
 
     <folder name="foldername" id="guid">
@@ -96,11 +92,11 @@ def wbs(element, wbslist, depth):
         info.ingest_wbslist(this_wbslist)
         info.ingest_items(sibling.items())
         info.complete()
-        wbs(sibling, this_wbslist, depth)  #recurr over any childern
+        wbs(sibling, this_wbslist, depth)  #recur over any children
         sibno += 1
 
 #
-# Start the recusive parse
+# Start the recursive parse
 #
         
 
