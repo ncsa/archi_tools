@@ -27,6 +27,7 @@ artifacts generated for downstream tool chains.
 
 import lxml.etree as ET
 import argparse
+import collections
 
 prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
@@ -45,22 +46,37 @@ class folderinfo :
     def __init__(self):
         import collections
         self.d = collections.defaultdict(lambda : "")
-        self.element_list = [] # id, name, type
+        self.element_list = [] # dictionary holding name, type, id
     def ingest_items(self, items):
-        for name, value in items:  self.d[name]=value
+        for name, value in items:
+            self.d[name]=value
     def ingest_wbslist(self,wbslist):
         self.d["wbs"] = ".".join(wbslist)
     def ingest_documentation(self, documentation):
         self.d["documentation"] = documentation
-    def ingest_element(self, id, name, type):
-        self.element_list.append(self, [id, name, type])
-    def get_line(self):
+    def ingest_element(self, items):
+        # provide stucture tuple of items cleaned of XML baggage
+        #make a dict to handle the fact that not all things have names
+        item_dict = collections.defaultdict(lambda : "")
+        for item in items:
+            #handle like this ('{http://www.w3.org/2001/XMLSchema-instance}type', 'archimate:ApplicationComponent')
+            if  "type" in item[0]:
+                item_dict["type"] = item[1].split(":")[1]
+            #handle  this ('name', 'Overall Base AA and ITSEC'),
+            elif  "name"  == item[0]:  
+                item_dict["name"] = item[1]
+            #handle guid like this  ('id', '25c8d1c1-818....')
+            elif "id" == item[0]:
+                item_dict["id"] = item[1]
+        self.element_list.append(item_dict)
+    def write_stanza(self, writer):
         out = []
         for h in self.HEADER: out.append(self.d[h])
-        return out
+        writer.writerow(out)
+        for element in self.element_list:
+            writer.writerow(["ELEMENT",self.d["wbs"],element["name"],element["type"]])
     def complete(self):
-        if len(ALL) == 0 : ALL.append(self.HEADER)
-        ALL.append(self.get_line())
+        ALL.append(self)
     
 
 def wbs(folder, wbslist, depth):
@@ -80,24 +96,24 @@ def wbs(folder, wbslist, depth):
     <folder name="foldername" id="guid">
 
 """
-    sibno = 1
+    info = folderinfo()
     depth=depth+1
+    #extract documentions (really there is just one)
+    for documentation in  folder.iterchildren("documentation"):
+           info.ingest_documentation(documentation.text)
+    #extract archiment elements 
+    for element in  folder.iterchildren("element"):
+        info.ingest_element(element.items())  #list of pairs of items 
+    info.ingest_wbslist(wbslist)
+    #Items are folderitems, like folder names 
+    info.ingest_items(folder.items())
+    info.complete()
+    #recurr over all folders contained in this folder.
+    sibno = 1
     for sibling in folder.iterchildren("folder"):
-        info = folderinfo()
-        for documentation in  folder.iterchildren("documentation"):
-            info.ingest_documentation(documentation.text)
-        for element in  folder.iterchildren("element"):  pass
         this_wbslist = wbslist+["%s"%sibno]
-        info.ingest_wbslist(this_wbslist)
-        info.ingest_items(sibling.items())
-        info.complete()
         wbs(sibling, this_wbslist, depth)  #recur over any children
-        sibno += 1
-
-#
-# Start the recursive parse
-#
-        
+        sibno += 1        
 
 #
 #
@@ -124,6 +140,6 @@ if __name__ == "__main__" :
     root = tree.getroot()
     wbs(root,[], 0)
     writer = csv.writer (sys.stdout)
-    for row in ALL: writer.writerow (row)
+    for row in ALL: row.write_stanza(writer)
 
 
