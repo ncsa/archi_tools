@@ -115,27 +115,32 @@ def wbs(folder, wbslist, depth):
         wbs(sibling, this_wbslist, depth)  #recur over any children
         sibno += 1        
 
+###########################################################
 #
+# Main program
 #
-#
+############################################################
+      
 
 if __name__ == "__main__" :
 
     import csv
     import sys
+    import shlog
 
     #main_parser = argparse.ArgumentParser(add_help=False)
     main_parser = argparse.ArgumentParser(
      description=__doc__,
-     formatter_class=argparse.RawDescriptionHelpFormatter)
+     formatter_class=argparse.RawDescriptionHelpFormatter,
+     fromfile_prefix_chars='@')
     main_parser.add_argument('--loglevel','-l',
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
                              default="ERROR")
     main_parser.add_argument("--prefix", "-p", default="LSST_")    
     main_parser.add_argument("archimatefile")
+
     args = main_parser.parse_args()
 
-    
     tree = ET.parse(args.archimatefile)
     root = tree.getroot()
     wbs(root,[], 0)
