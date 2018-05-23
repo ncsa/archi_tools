@@ -54,10 +54,11 @@ class folderinfo :
         self.d["wbs"] = ".".join(wbslist)
     def ingest_documentation(self, documentation):
         self.d["documentation"] = documentation
-    def ingest_element(self, items):
+    def ingest_element(self, items, element_doc):
         # provide stucture tuple of items cleaned of XML baggage
         #make a dict to handle the fact that not all things have names
         item_dict = collections.defaultdict(lambda : "")
+        item_dict["documentation"] = element_doc
         for item in items:
             #handle like this ('{http://www.w3.org/2001/XMLSchema-instance}type', 'archimate:ApplicationComponent')
             if  "type" in item[0]:
@@ -71,10 +72,17 @@ class folderinfo :
         self.element_list.append(item_dict)
     def write_stanza(self, writer):
         out = []
-        for h in self.HEADER: out.append(self.d[h])
+        for h in ["wbs","name","documentation"]: out.append(self.d[h])
         writer.writerow(out)
         for element in self.element_list:
-            writer.writerow(["ELEMENT",self.d["wbs"],element["name"],element["type"]])
+            #Hack
+            if "Node" in element["type"]  or "Equipment" in element["type"]:
+                pass
+            else:
+                continue
+            out = [self.d["wbs"]]  
+            for item in ["name","documentation"] : out.append(element[item])
+            writer.writerow(out)
     def complete(self):
         ALL.append(self)
     
@@ -98,15 +106,23 @@ def wbs(folder, wbslist, depth):
 """
     info = folderinfo()
     depth=depth+1
+    #
+    # HACK Producing just Technoloy
+    if  wbslist and wbslist[0] != '4' :
+        return
+    #Items are folderitems, like folder names 
+    info.ingest_items(folder.items())
     #extract documentions (really there is just one)
     for documentation in  folder.iterchildren("documentation"):
            info.ingest_documentation(documentation.text)
     #extract archiment elements 
     for element in  folder.iterchildren("element"):
-        info.ingest_element(element.items())  #list of pairs of items 
+            #extract documentions (really there is just one)
+        doc = ""
+        for documentation in  element.iterchildren("documentation"):
+           doc = documentation.text
+        info.ingest_element(element.items(), doc)  #list of pairs of items 
     info.ingest_wbslist(wbslist)
-    #Items are folderitems, like folder names 
-    info.ingest_items(folder.items())
     info.complete()
     #recurr over all folders contained in this folder.
     sibno = 1
