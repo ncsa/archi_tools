@@ -88,11 +88,12 @@ class folderinfo :
         col = 1
         #folder information
         for h in ["wbs","name","documentation"]:
+            blue = "000000FF"
             worksheet.cell(row=rowno, column=col, value=self.d[h])
             worksheet.cell(row=rowno, column=col).font = Font(bold=True)
+            #no mattere the RGB I set BLUE to the background renders as blacl
+            #worksheet.cell(row=rowno, column=col).fill = PatternFill(bgColor=blue, fill_type = "solid")
             if "documentation" == h :
-                pass
-                #worksheet.cell(row=rowno, column=col).style.alignment.wrap_text=True
                 worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
             col += 1
         rowno += 1
@@ -108,6 +109,8 @@ class folderinfo :
             col += 1
             for item in ["name","documentation","units"] :
                 worksheet.cell(row=rowno, column=col, value=element[item])
+                if "documentation" == item :
+                    worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
             rowno += 1
         return rowno
@@ -179,6 +182,8 @@ if __name__ == "__main__" :
     from openpyxl import Workbook
     from openpyxl.styles import Font
     from openpyxl.styles import Alignment
+    from openpyxl.styles import PatternFill
+    
     #main_parser = argparse.ArgumentParser(add_help=False)
     main_parser = argparse.ArgumentParser(
      description=__doc__,
@@ -200,7 +205,9 @@ if __name__ == "__main__" :
     wb = Workbook() #make workbook
     ws = wb.active  #use default sheet
     rowno = 1
+    #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
+    #set columns to reasonable widths.
     for col in ws.columns:
         max_length = 0
         column = col[0].column # Get the column name
