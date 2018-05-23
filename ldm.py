@@ -33,7 +33,7 @@ prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
 
 
-ALL = []  # hoild the list of all folders.
+ALL = []  # hold the list of all folders.
 class folderinfo :
     """
     The folderinfo class holds all data extracted from a
@@ -42,7 +42,7 @@ class folderinfo :
     of elements are collected. 
     """
 
-    HEADER = ["wbs","name","id","documentation"]
+    HEADER = ["wbs","name","id","documentation","units"]
     def __init__(self):
         import collections
         self.d = collections.defaultdict(lambda : "")
@@ -54,11 +54,12 @@ class folderinfo :
         self.d["wbs"] = ".".join(wbslist)
     def ingest_documentation(self, documentation):
         self.d["documentation"] = documentation
-    def ingest_element(self, items, element_doc):
+    def ingest_element(self, items, element_doc, element_units):
         # provide stucture tuple of items cleaned of XML baggage
         #make a dict to handle the fact that not all things have names
         item_dict = collections.defaultdict(lambda : "")
         item_dict["documentation"] = element_doc
+        item_dict["units"] = element_units
         for item in items:
             #handle like this ('{http://www.w3.org/2001/XMLSchema-instance}type', 'archimate:ApplicationComponent')
             if  "type" in item[0]:
@@ -75,13 +76,13 @@ class folderinfo :
         for h in ["wbs","name","documentation"]: out.append(self.d[h])
         writer.writerow(out)
         for element in self.element_list:
-            #Hack
+            #Hack only report on Ndes and equiment.
             if "Node" in element["type"]  or "Equipment" in element["type"]:
                 pass
             else:
                 continue
             out = [self.d["wbs"]]  
-            for item in ["name","documentation"] : out.append(element[item])
+            for item in ["name","documentation","units"] : out.append(element[item])
             writer.writerow(out)
     def complete(self):
         ALL.append(self)
@@ -121,7 +122,11 @@ def wbs(folder, wbslist, depth):
         doc = ""
         for documentation in  element.iterchildren("documentation"):
            doc = documentation.text
-        info.ingest_element(element.items(), doc)  #list of pairs of items 
+        units = ""
+        for property in element.iterchildren("property"):
+            for key  in property.values():
+                if "UNIT" in key : units = key 
+        info.ingest_element(element.items(), doc, units)  #list of pairs of items 
     info.ingest_wbslist(wbslist)
     info.complete()
     #recurr over all folders contained in this folder.
