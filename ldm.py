@@ -87,7 +87,7 @@ class folderinfo :
     def append_excel(self, worksheet, rowno):
         col = 1
         #folder information
-        for h in ["wbs","id","name","documentation"]:
+        for h in ["id","wbs","name","documentation"]:
             blue = "000000FF"
             worksheet.cell(row=rowno, column=col, value=self.d[h])
             worksheet.cell(row=rowno, column=col).font = Font(bold=True)
@@ -105,9 +105,9 @@ class folderinfo :
                 pass
             else:
                 continue
-            worksheet.cell(row=rowno, column=col, value=self.d["wbs"])
-            col += 1
             worksheet.cell(row=rowno, column=col, value=self.d["id"])
+            col += 1
+            worksheet.cell(row=rowno, column=col, value=self.d["wbs"])
             col += 1
             for item in ["name","documentation","units"] :
                 worksheet.cell(row=rowno, column=col, value=element[item])
