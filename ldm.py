@@ -51,7 +51,7 @@ class folderinfo :
         for name, value in items:
             self.d[name]=value
     def ingest_wbslist(self,wbslist):
-        self.d["wbs"] = ".".join(wbslist)
+        self.d["wbs"] = "WBS " + ".".join(wbslist)
     def ingest_documentation(self, documentation):
         self.d["documentation"] = documentation
     def ingest_element(self, items, element_doc, element_units):
@@ -84,6 +84,34 @@ class folderinfo :
             out = [self.d["wbs"]]  
             for item in ["name","documentation","units"] : out.append(element[item])
             writer.writerow(out)
+    def append_excel(self, worksheet, rowno):
+        col = 1
+        #folder information
+        for h in ["wbs","name","documentation"]:
+            worksheet.cell(row=rowno, column=col, value=self.d[h])
+            worksheet.cell(row=rowno, column=col).font = Font(bold=True)
+            if "documentation" == h :
+                pass
+                #worksheet.cell(row=rowno, column=col).style.alignment.wrap_text=True
+                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+            col += 1
+        rowno += 1
+        #element  information
+        #Hack only report on Nodes and Equipment.
+        for element in self.element_list:
+            col = 1
+            if "Node" in element["type"]  or "Equipment" in element["type"]:
+                pass
+            else:
+                continue
+            worksheet.cell(row=rowno, column=col, value=self.d["wbs"])
+            col += 1
+            for item in ["name","documentation","units"] :
+                worksheet.cell(row=rowno, column=col, value=element[item])
+                col += 1
+            rowno += 1
+        return rowno
+        
     def complete(self):
         ALL.append(self)
     
@@ -148,7 +176,9 @@ if __name__ == "__main__" :
     import csv
     import sys
     import shlog
-
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.styles import Alignment
     #main_parser = argparse.ArgumentParser(add_help=False)
     main_parser = argparse.ArgumentParser(
      description=__doc__,
@@ -166,6 +196,22 @@ if __name__ == "__main__" :
     root = tree.getroot()
     wbs(root,[], 0)
     writer = csv.writer (sys.stdout)
-    for row in ALL: row.write_stanza(writer)
-
+    #for row in ALL: row.write_stanza(writer)
+    wb = Workbook() #make workbook
+    ws = wb.active  #use default sheet
+    rowno = 1
+    for row in ALL: rowno = row.append_excel(ws, rowno)
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column # Get the column name
+        for cell in col:
+            try: # Necessary to avoid error on empty cells
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+            adjusted_width = (max_length + 2) * 1.2
+            adjusted_width = min (adjusted_width, 60)
+        ws.column_dimensions[column].width = adjusted_width
+    wb.save("dog.xlsx")
 
