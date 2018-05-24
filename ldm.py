@@ -86,7 +86,7 @@ class folderinfo :
             writer.writerow(out)
     def append_excel(self, worksheet, rowno):
         col = 1
-        #folder information
+        #make line for folder information
         for h in ["id","wbs","name","documentation"]:
             blue = "000000FF"
             worksheet.cell(row=rowno, column=col, value=self.d[h])
@@ -97,7 +97,7 @@ class folderinfo :
                 worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
             col += 1
         rowno += 1
-        #element  information
+        #makeline for each element 
         #Hack only report on Nodes and Equipment.
         for element in self.element_list:
             col = 1
@@ -119,7 +119,19 @@ class folderinfo :
         
     def complete(self):
         ALL.append(self)
+
+
+def get_element_property (element, property):
+    #return the fist key matching property, in no match return empty string.
+    #property can be a glob.
+    #n.b "property refers to a property attached to an folder, element, or similar in Archimate.
+    #a specifc kind fo XML feature related to archimate
+    import fnmatch
     
+    for e in element.iterchildren("property"):
+        for key  in e.values():
+            if fnmatch.fnmatch(key, property): return key
+    return ""
 
 def wbs(folder, wbslist, depth):
     """
@@ -138,30 +150,27 @@ def wbs(folder, wbslist, depth):
     <folder name="foldername" id="guid">
 
 """
-    info = folderinfo()
-    depth=depth+1
-    #
-    # HACK Producing just Technoloy
-    if  wbslist and wbslist[0] != '4' :
-        return
-    #Items are folderitems, like folder names 
-    info.ingest_items(folder.items())
-    #extract documentions (really there is just one)
-    for documentation in  folder.iterchildren("documentation"):
-           info.ingest_documentation(documentation.text)
-    #extract archiment elements 
-    for element in  folder.iterchildren("element"):
+    #folders with provisioning estimear have the LDM-129 Property.
+    # xml looks like this: <property key="LDM-129"/>
+    if get_element_property(folder,"LDM-129"): 
+        info = folderinfo()  #container object to load into
+        depth=depth+1
+    
+        #Items are folderitems, like folder names 
+        info.ingest_items(folder.items())
+        #extract documentions (really there is just one)
+        for documentation in  folder.iterchildren("documentation"):
+            info.ingest_documentation(documentation.text)
+        #extract archiment elements 
+        for element in  folder.iterchildren("element"):
             #extract documentions (really there is just one)
-        doc = ""
-        for documentation in  element.iterchildren("documentation"):
-           doc = documentation.text
-        units = ""
-        for property in element.iterchildren("property"):
-            for key  in property.values():
-                if "UNIT" in key : units = key 
-        info.ingest_element(element.items(), doc, units)  #list of pairs of items 
-    info.ingest_wbslist(wbslist)
-    info.complete()
+            doc = ""
+            for documentation in  element.iterchildren("documentation"):
+                doc = documentation.text
+            units = get_element_property (element, "UNIT*")
+            info.ingest_element(element.items(), doc, units)  #list of pairs of items 
+            info.ingest_wbslist(wbslist)
+            info.complete()
     #recurr over all folders contained in this folder.
     sibno = 1
     for sibling in folder.iterchildren("folder"):
@@ -223,4 +232,6 @@ if __name__ == "__main__" :
             adjusted_width = min (adjusted_width, 60)
         ws.column_dimensions[column].width = adjusted_width
     wb.save("dog.xlsx")
-
+    import os
+    os.system('open dog.xlsx -a "Microsoft Excel"')
+    
