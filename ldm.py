@@ -54,6 +54,10 @@ class folderinfo :
         self.d["wbs"] = "WBS " + ".".join(wbslist)
     def ingest_documentation(self, documentation):
         self.d["documentation"] = documentation
+    def ingest_location(self, location):
+        self.d["location"] = location
+    def ingest_enclave(self, location):
+        self.d["enclave"] = location
     def ingest_element(self, items, element_doc, element_units):
         # provide stucture tuple of items cleaned of XML baggage
         #make a dict to handle the fact that not all things have names
@@ -73,7 +77,7 @@ class folderinfo :
         self.element_list.append(item_dict)
     def write_stanza(self, writer):
         out = []
-        for h in ["wbs","name","documentation"]: out.append(self.d[h])
+        for h in ["wbs","name","documentation","location","enclave"]: out.append(self.d[h])
         writer.writerow(out)
         for element in self.element_list:
             #Hack only report on Ndes and equiment.
@@ -82,16 +86,16 @@ class folderinfo :
             else:
                 continue
             out = [self.d["wbs"]]  
-            for item in ["name","documentation","units"] : out.append(element[item])
+            for item in ["name","documentation","blank","blank","units"] : out.append(element[item])
             writer.writerow(out)
     def append_excel(self, worksheet, rowno):
         col = 1
         #make line for folder information
-        for h in ["id","wbs","name","documentation"]:
+        for h in ["id","wbs","name","documentation","location","enclave"]:
             blue = "000000FF"
             worksheet.cell(row=rowno, column=col, value=self.d[h])
             worksheet.cell(row=rowno, column=col).font = Font(bold=True)
-            #no mattere the RGB I set BLUE to the background renders as blacl
+            #no matter how  the RGB I set BLUE to the background renders as blac.
             #worksheet.cell(row=rowno, column=col).fill = PatternFill(bgColor=blue, fill_type = "solid")
             if "documentation" == h :
                 worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
@@ -109,7 +113,7 @@ class folderinfo :
             col += 1
             worksheet.cell(row=rowno, column=col, value=self.d["wbs"])
             col += 1
-            for item in ["name","documentation","units"] :
+            for item in ["name","documentation","blank","blank","units"] :
                 worksheet.cell(row=rowno, column=col, value=element[item])
                 if "documentation" == item :
                     worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
@@ -120,9 +124,8 @@ class folderinfo :
     def complete(self):
         ALL.append(self)
 
-
-def get_element_property (element, property):
-    #return the fist key matching property, in no match return empty string.
+def get_property (element, property):
+    #return the fist key matching property, if no match return empty string.
     #property can be a glob.
     #n.b "property refers to a property attached to an folder, element, or similar in Archimate.
     #a specifc kind fo XML feature related to archimate
@@ -152,7 +155,7 @@ def wbs(folder, wbslist, depth):
 """
     #folders with provisioning estimear have the LDM-129 Property.
     # xml looks like this: <property key="LDM-129"/>
-    if get_element_property(folder,"LDM-129"): 
+    if get_property(folder,"LDM-129"): 
         info = folderinfo()  #container object to load into
         depth=depth+1
     
@@ -161,16 +164,19 @@ def wbs(folder, wbslist, depth):
         #extract documentions (really there is just one)
         for documentation in  folder.iterchildren("documentation"):
             info.ingest_documentation(documentation.text)
+        info.ingest_location(get_property (folder, "Loc*"))
+        info.ingest_enclave(get_property (folder, "Enc*"))
+
         #extract archiment elements 
         for element in  folder.iterchildren("element"):
             #extract documentions (really there is just one)
             doc = ""
             for documentation in  element.iterchildren("documentation"):
                 doc = documentation.text
-            units = get_element_property (element, "UNIT*")
+            units = get_property (element, "Unit:*")
             info.ingest_element(element.items(), doc, units)  #list of pairs of items 
             info.ingest_wbslist(wbslist)
-            info.complete()
+        info.complete()
     #recurr over all folders contained in this folder.
     sibno = 1
     for sibling in folder.iterchildren("folder"):
@@ -178,6 +184,32 @@ def wbs(folder, wbslist, depth):
         wbs(sibling, this_wbslist, depth)  #recur over any children
         sibno += 1        
 
+
+###########################################################
+#
+# generic spreadsheet support (nascent stuff to make its
+# own library
+#
+############################################################
+        
+def make_ws_pretty(args, ws):
+    #set columns to reasonable widths.
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column # Get the column name
+        for cell in col:
+            try: # Necessary to avoid error on empty cells
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+            adjusted_width = (max_length + 2) * 1.2
+            adjusted_width = min (adjusted_width, 60)
+        ws.column_dimensions[column].width = adjusted_width
+    return ws
+
+
+        
 ###########################################################
 #
 # Main program
@@ -203,6 +235,8 @@ if __name__ == "__main__" :
     main_parser.add_argument('--loglevel','-l',
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
                              default="ERROR")
+    
+    main_parser.add_argument("--show", "-s", action='store_true', help="pop up excel to show the reult")    
     main_parser.add_argument("--prefix", "-p", default="LSST_")    
     main_parser.add_argument("archimatefile")
 
@@ -218,20 +252,10 @@ if __name__ == "__main__" :
     rowno = 1
     #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
-    #set columns to reasonable widths.
-    for col in ws.columns:
-        max_length = 0
-        column = col[0].column # Get the column name
-        for cell in col:
-            try: # Necessary to avoid error on empty cells
-                if len(str(cell.value)) > max_length:
-                    max_length = len(cell.value)
-            except:
-                pass
-            adjusted_width = (max_length + 2) * 1.2
-            adjusted_width = min (adjusted_width, 60)
-        ws.column_dimensions[column].width = adjusted_width
+    
+    #sets columns to resonable initial width, ets.
+    make_ws_pretty(args, ws) 
     wb.save("dog.xlsx")
     import os
-    os.system('open dog.xlsx -a "Microsoft Excel"')
+    if args.show : os.system('open dog.xlsx -a "Microsoft Excel"')
     
