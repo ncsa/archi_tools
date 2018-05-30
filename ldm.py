@@ -64,11 +64,17 @@ class plateau_info :
             elif "id" == item[0]:
                 self.d["id"] = item[1]
 
+    def make_excel_headers(self, worksheet, col):
+        rowno = 1
+        worksheet.cell(row=rowno, column=col, value=self.d["name"])
+        worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+        col = col+1
+        return col
+    
     def append_excel(self, worksheet, rowno):
-        col = 1
+        col = 7  #hack
         #makeline for each element 
         #Hack only report on Nodes and Equipment.
-        col = 1
         for item in ["type","name","documentation","shortname"] :
             worksheet.cell(row=rowno, column=col, value=self.d[item])
             if "documentation" == item :
@@ -329,6 +335,8 @@ if __name__ == "__main__" :
     tree = ET.parse(args.archimatefile)
     root = tree.getroot()
     wbs(root,[], 0)
+    plateaus(root)
+
     writer = csv.writer (sys.stdout)
     #for row in ALL: row.write_stanza(writer)
     wb = Workbook() #make workbook
@@ -336,7 +344,8 @@ if __name__ == "__main__" :
     rowno = 1
     #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
-    for row in ALL_PLATEAUS: rowno = row.append_excel(ws, rowno)
+    colno = 8 #hack
+    for item in ALL_PLATEAUS: colno = item.make_excel_headers(ws, colno) 
     
     #sets columns to resonable initial width, ets.
     make_ws_pretty(args, ws) 
