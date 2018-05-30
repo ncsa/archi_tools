@@ -32,7 +32,91 @@ import collections
 prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
 
+ALL_PLATEAUS = []  # hold the list of all folders.
+class plateau_info :
+    """
+    The plateau_info class holds all data extracted from a
+    plateau
+    """
 
+    def __init__(self):
+        import collections
+        self.d = collections.defaultdict(lambda : "")
+        self.element_list = [] # dictionary holding name, type, id
+    def ingest_items(self, items):
+        for name, value in items:
+            self.d[name]=value
+    def ingest_documentation(self, documentation):
+        self.d["documentation"] = documentation
+    def ingest_shortname(self, location):
+        self.d["shortname"] = location
+    def ingest_element(self, items):
+        # provide stuctures tuple of items cleaned of XML baggage
+        #make a dict to handle the fact that not all things have names
+        for item in items:
+            #handle like this ('{http://www.w3.org/2001/XMLSchema-instance}type', 'archimate:ApplicationComponent')
+            if  "type" in item[0]:
+                #self.d["type"] = item[1].split(":")[:-1]
+                self.d["type"] = item[1]
+            elif  "name"  == item[0]:  
+                self.d["name"] = item[1]
+            #handle guid like this  ('id', '25c8d1c1-818....')
+            elif "id" == item[0]:
+                self.d["id"] = item[1]
+
+    def append_excel(self, worksheet, rowno):
+        col = 1
+        #makeline for each element 
+        #Hack only report on Nodes and Equipment.
+        col = 1
+        for item in ["type","name","documentation","shortname"] :
+            worksheet.cell(row=rowno, column=col, value=self.d[item])
+            if "documentation" == item :
+                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+            col += 1
+            rowno += 1
+        return rowno
+        
+    def complete(self):
+        ALL_PLATEAUS.append(self)
+
+def plateaus(folder):
+    """
+    Parse archimate for records related to folders and append
+    per-folder plateau_info class objects to the global ALL_PLATEAUS list.
+
+    Data Model supported:
+
+    In the current archimante (4.2.0) version 
+    Each top level archimate folder is is a <folder>
+    just under the xml root.  <folders> may contain
+    <folders>,  Folders man contain an optional
+    <documentation> entity. <folders> contain
+    items id and name. e.g.
+
+    <folder name="foldername" id="guid">
+
+"""
+    #folders with provisioning estimear have the LDM-129 Property.
+    # xml looks like this: <property key="LDM-129"/>
+    if get_property(folder,"PLATEAU"):
+     
+        #extract archiment elements from folder
+        for element in  folder.iterchildren("element"):
+            info = plateau_info()  #container object to load into
+
+            doc = ""
+            #extract documentions (really there is just one)
+            for documentation in  element.iterchildren("documentation"):
+                doc = documentation.text
+            units = get_property (element, "Plateau:Shortname*")
+            info.ingest_element(element.items())  #list of pairs of items 
+            info.complete()
+    #recurr over all folders contained in this folder.
+    for sibling in folder.iterchildren("folder"):
+        plateaus(sibling)  #recur over any children
+
+        
 ALL = []  # hold the list of all folders.
 class folderinfo :
     """
@@ -252,6 +336,7 @@ if __name__ == "__main__" :
     rowno = 1
     #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
+    for row in ALL_PLATEAUS: rowno = row.append_excel(ws, rowno)
     
     #sets columns to resonable initial width, ets.
     make_ws_pretty(args, ws) 
