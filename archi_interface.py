@@ -68,7 +68,7 @@ def acquire(args):
             ffrom = os.path.join(args.export_area,args.prefix + file)
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
-            shlog.normal("cached: %s" % fto)
+            shlog.normal("cached: %s to %s" % (ffrom, fto))
 
 def acquire_openx(args):
     """ Copy open exchange format CSV to cache, then "fix" it
