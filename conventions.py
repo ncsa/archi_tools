@@ -42,6 +42,7 @@ def mkTables(args):
     
     mk_requirements(args)
     mkserving(args) 
+    mk_node_plateau(args)
     
 def mkserving(args):
     """
@@ -147,7 +148,11 @@ def x_relationships(args):
     
     sql = """
            SELECT
-             relations.source, relations.target, relations.type, e1.name, e2.name
+             relations.source,
+             relations.target,
+             relations.type,
+             e1.name,
+             e2.name
            FROM
             relations
           JOIN  elements e1
@@ -162,12 +167,41 @@ def x_relationships(args):
              (e1.type = "ApplicationComponent" AND relations.type = "RealizationRelationship" AND e2.type = "Requirement")
           OR
              (e1.type = "Requirement" AND relations.type = "CompositionRelationship" AND e2.type = "Requirement")
+          )
 
     """
-    import sys
-    import csv
-    out = csv.writer(sys.stdout)
-    out.writerows(q(args,sql))
+
+def mk_node_plateau(args):
+    """
+    Make table to nodes and plateaus
+    """
+    
+    sql = """
+           CREATE TABLE NODE_PLATEAU as 
+           SELECT
+             relations.source  Node_id,
+             relations.target   Pla_id,
+             relations.type   Rel_type,
+             e1.name         Node_name,
+             e2.name          Pla_name
+
+           FROM
+              relations
+          JOIN  elements e1
+            ON (e1.id = relations.source)
+          JOIN  elements e2
+          ON (e2.id = relations.target)
+          AND
+             (e1.type = "Plateau" AND relations.type = "CompositionRelationship" AND e2.type = "Node")
+          OR
+             (e1.type = "Node" AND relations.type = "CompositionRelationship" AND e2.type = "Plateau")
+    """
+    shlog.normal ("Making  platwear node table ")
+    q(args, sql)
+
+
+import sys
+import csv
 
 def parsers(subparsers):
     """

@@ -69,7 +69,15 @@ def acquire(args):
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s to %s" % (ffrom, fto))
-
+      acquire_archimate(args)
+      
+def acquire_archimate(args):
+      """Copy .archimate file from the working  area to the local cache"""
+      ffrom = "/Users/donaldp/Box Sync/astronomy-section/LSST/archi/Draft2.archimate"
+      fto   = "Draft2.archimate"
+      shutil.copyfile(ffrom, fto)
+      shlog.normal("copied %s to %s" % (ffrom, fto))
+       
 def acquire_openx(args):
     """ Copy open exchange format CSV to cache, then "fix" it
 
