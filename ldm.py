@@ -28,6 +28,8 @@ artifacts generated for downstream tool chains.
 import lxml.etree as ET
 import argparse
 import collections
+import db
+import shlog
 
 prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
@@ -133,8 +135,9 @@ class folderinfo :
     """
 
     HEADER = ["wbs","name","id","documentation","units"]
-    def __init__(self):
+    def __init__(self, args):
         import collections
+        self.args = args
         self.d = collections.defaultdict(lambda : "")
         self.element_list = [] # dictionary holding name, type, id
     def ingest_items(self, items):
@@ -175,7 +178,7 @@ class folderinfo :
                 pass
             else:
                 continue
-            out = [self.d["wbs"]]  
+            out = [self.d["wbs"]]
             for item in ["name","documentation","blank","blank","units"] : out.append(element[item])
             writer.writerow(out)
     def append_excel(self, worksheet, rowno):
@@ -208,9 +211,14 @@ class folderinfo :
                 if "documentation" == item :
                     worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
+                self.mark_plateau(element["id"])                
             rowno += 1
         return rowno
-        
+    def mark_plateau(self, node_id):
+        mark = "XXXX"  
+        sql = "SELECT Pla_name from  NODE_PLATEAU where Node_id = '%s' " % self.d["id"]
+        ret = db.q(self.args, sql)
+        print "+++++", ["%s" % r for r in ret]
     def complete(self):
         ALL.append(self)
 
@@ -226,7 +234,7 @@ def get_property (element, property):
             if fnmatch.fnmatch(key, property): return key
     return ""
 
-def wbs(folder, wbslist, depth):
+def wbs(folder, args, wbslist, depth):
     """
     Parse archimate for records related to folders and append
     per-folder folderinfo class objects to the global ALL list.
@@ -246,7 +254,7 @@ def wbs(folder, wbslist, depth):
     #folders with provisioning estimear have the LDM-129 Property.
     # xml looks like this: <property key="LDM-129"/>
     if get_property(folder,"LDM-129"): 
-        info = folderinfo()  #container object to load into
+        info = folderinfo(args)  #container object to load into
         depth=depth+1
     
         #Items are folderitems, like folder names 
@@ -271,7 +279,7 @@ def wbs(folder, wbslist, depth):
     sibno = 1
     for sibling in folder.iterchildren("folder"):
         this_wbslist = wbslist+["%s"%sibno]
-        wbs(sibling, this_wbslist, depth)  #recur over any children
+        wbs(sibling, args, this_wbslist, depth)  #recur over any children
         sibno += 1        
 
 
@@ -324,17 +332,18 @@ if __name__ == "__main__" :
      fromfile_prefix_chars='@')
     main_parser.add_argument('--loglevel','-l',
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
-                             default="ERROR")
+                             default="NONE")
     
     main_parser.add_argument("--show", "-s", action='store_true', help="pop up excel to show the reult")    
     main_parser.add_argument("--prefix", "-p", default="LSST_")    
     main_parser.add_argument("archimatefile")
 
     args = main_parser.parse_args()
-
+    shlog.basicConfig(level=shlog.__dict__[args.loglevel])
+    args.dbfile = "LSST_archi_tool.db"  #HACK
     tree = ET.parse(args.archimatefile)
     root = tree.getroot()
-    wbs(root,[], 0)
+    wbs(root, args, [], 0)
     plateaus(root)
 
     writer = csv.writer (sys.stdout)
