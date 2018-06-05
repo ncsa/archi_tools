@@ -78,30 +78,14 @@ class folderinfo :
             elif "id" == item[0]:
                 item_dict["id"] = item[1]
         self.element_list.append(item_dict)
-    def write_stanza(self, writer):
-        out = []
-        for h in ["wbs","name","documentation","location","enclave"]: out.append(self.d[h])
-        writer.writerow(out)
-        for element in self.element_list:
-            #Hack only report on Ndes and equiment.
-            if "Node" in element["type"]  or "Equipment" in element["type"]:
-                pass
-            else:
-                continue
-            out = [self.d["wbs"]]
-            for item in ["name","documentation","blank","blank","units"] : out.append(element[item])
-            writer.writerow(out)
+
     def append_excel(self, worksheet, rowno):
         col = 1
         #make line for folder information
         for h in ["id","wbs","name","documentation","location","enclave"]:
-            blue = "000000FF"
             worksheet.cell(row=rowno, column=col, value=self.d[h])
             worksheet.cell(row=rowno, column=col).font = Font(bold=True)
-            #no matter how  the RGB I set BLUE to the background renders as blac.
-            #worksheet.cell(row=rowno, column=col).fill = PatternFill(bgColor=blue, fill_type = "solid")
-            if "documentation" == h :
-                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+            worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
             col += 1
         rowno += 1
         #makeline for each element 
@@ -118,21 +102,18 @@ class folderinfo :
             col += 1
             for item in ["name","documentation","blank","blank","units"] :
                 worksheet.cell(row=rowno, column=col, value=element[item])
-                if "documentation" == item :
-                    worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
-                print element
-                self.mark_plateau(element["id"])  # this is still the folder.                
+                mark = self.mark_plateau(element["id"])
+                worksheet.cell(row=rowno, column=col, value=mark)
+                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
             rowno += 1
         return rowno
     def mark_plateau(self, node_id):
         sql = "SELECT Pla_name from  NODE_PLATEAU where Node_id = '%s' " % (node_id)
-        print "---",sql
         ret = db.q(self.args, sql)
         l = ["%s" % r for r in ret]
-        if len(l) > 0  :
-            #import pdb ; pdb.set_trace()
-            print "++++",l
+        return "%s" % l
     def complete(self):
         ALL.append(self)
 
