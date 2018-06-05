@@ -17,7 +17,7 @@ import tabulate
 ########################################################
 
 def q(args, sql):
-    #a funnel routned for report queries, main benefit is query printing
+    #a funnel routine for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
     con.text_factory = lambda x: x.decode("utf-8")
     cur = con.cursor()

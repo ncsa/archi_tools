@@ -211,14 +211,18 @@ class folderinfo :
                 if "documentation" == item :
                     worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
-                self.mark_plateau(element["id"])                
+                print element
+                self.mark_plateau(element["id"])  # this is still the folder.                
             rowno += 1
         return rowno
     def mark_plateau(self, node_id):
-        mark = "XXXX"  
-        sql = "SELECT Pla_name from  NODE_PLATEAU where Node_id = '%s' " % self.d["id"]
+        sql = "SELECT Pla_name from  NODE_PLATEAU where Node_id = '%s' " % (node_id)
+        print "---",sql
         ret = db.q(self.args, sql)
-        print "+++++", ["%s" % r for r in ret]
+        l = ["%s" % r for r in ret]
+        if len(l) > 0  :
+            #import pdb ; pdb.set_trace()
+            print "++++",l
     def complete(self):
         ALL.append(self)
 

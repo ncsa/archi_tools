@@ -174,16 +174,18 @@ def x_relationships(args):
 def mk_node_plateau(args):
     """
     Make table to nodes and plateaus
+    #plateau is source  e.g. 62afd6a9-1915-4220-ac50-21bc39cb69a5 
+    #node is target     e.g. e9903810-361f-42fb-a1bd-f196f2ff25f3
     """
     
     sql = """
            CREATE TABLE NODE_PLATEAU as 
            SELECT
-             relations.source  Node_id,
-             relations.target   Pla_id,
-             relations.type   Rel_type,
-             e1.name         Node_name,
-             e2.name          Pla_name
+             relations.source   Pla_id,
+             relations.target   Node_id,
+             relations.type     Rel_type,
+             e1.name            Pla_name,
+             e2.name            Node_name
 
            FROM
               relations
@@ -191,10 +193,13 @@ def mk_node_plateau(args):
             ON (e1.id = relations.source)
           JOIN  elements e2
           ON (e2.id = relations.target)
-          AND
-             (e1.type = "Plateau" AND relations.type = "CompositionRelationship" AND e2.type = "Node")
-          OR
-             (e1.type = "Node" AND relations.type = "CompositionRelationship" AND e2.type = "Plateau")
+          Where 
+             e1.type = "Plateau"
+             AND
+             relations.type = "CompositionRelationship"
+             AND
+             e2.type = "Node"
+
     """
     shlog.normal ("Making  platwear node table ")
     q(args, sql)
