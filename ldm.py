@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Process an archi .archimate xml into
+rocess an archi .archimate xml into
 material needed for re-costing. 
 
 This is a stand-alone tool to generate a
@@ -217,9 +217,9 @@ def make_ws_pretty(args, ws):
             except:
                 pass
             adjusted_width = (max_length + 2) * 1.2
-            maxwidth = 60
-            if colno > 8 : maxwidth = 20
-            adjusted_width = min (adjusted_width, 60)
+            max_width = 60
+            if colno > 7 : max_width = 20
+            adjusted_width = min (adjusted_width, max_width )
         ws.column_dimensions[column].width = adjusted_width
     return ws
 
@@ -276,6 +276,7 @@ if __name__ == "__main__" :
     for h in get_header(args):
         ws.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
         ws.cell(row=rowno, column=col, value=h)
+        ws.cell(row=rowno, column=col).font = Font(bold=True)
         col += 1
     rowno = 2
     #build the workbook
