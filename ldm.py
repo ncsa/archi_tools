@@ -34,8 +34,9 @@ import shlog
 prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
 
-        
+
 ALL = []  # hold the list of all folders.
+
 class folderinfo :
     """
     The folderinfo class holds all data extracted from a
@@ -82,12 +83,26 @@ class folderinfo :
     def append_excel(self, worksheet, rowno):
         col = 1
         #make line for folder information
+        # source = folder
+        # keywords from each
         for h in ["id","wbs","name","documentation","location","enclave"]:
             worksheet.cell(row=rowno, column=col, value=self.d[h])
             worksheet.cell(row=rowno, column=col).font = Font(bold=True)
             worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
             col += 1
         rowno += 1
+        #  Now lines from nodes in folder
+        #  whether to proint the line or continure is continue based on a filter.
+        # ginve we are printing a line, cells from the line are computed in differnet ways
+        #       repeat some lines from folder  The folder is the "parent" of this stanza
+        #       then print some lines from the elment
+        #       then for every plateas, print a f(data from element, data from plateau)
+        #       idea
+        #       functions  fetch via keyword from parent,  f(parent, key)
+        #                  fetch from elemnet context      f(self, Key)
+        #                  compute from definintion, elmement context) ** is most genreal
+        #                                                  f(self, self.context, key) 
+        #                      
         #makeline for each element 
         #Hack only report on Nodes and Equipment.
         for element in self.element_list:
@@ -104,16 +119,19 @@ class folderinfo :
                 worksheet.cell(row=rowno, column=col, value=element[item])
                 worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
-                mark = self.mark_plateau(element["id"])
-                worksheet.cell(row=rowno, column=col, value=mark)
-                worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
-            rowno += 1
+            #now mark all relevant plateaus    
+            sql = "select distinct Pla_name  p from NODE_PLATEAU order by p  Asc"
+            for plateau in  db.q(self.args,sql):
+                plateau = plateau[0]
+                sql = "select count(*) from  NODE_PLATEAU  where Node_id = '%s' and Pla_name  =  '%s' "  % (element["id"], plateau)
+                count = db.q(self.args, sql).next()[0]
+                if count > 0 :
+                    worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+                    worksheet.cell(row=rowno, column=col, value=plateau.strip())
+                col +=1
+            rowno += 1    
         return rowno
-    def mark_plateau(self, node_id):
-        sql = "SELECT Pla_name from  NODE_PLATEAU where Node_id = '%s' " % (node_id)
-        ret = db.q(self.args, sql)
-        l = ["%s" % r for r in ret]
-        return "%s" % l
+
     def complete(self):
         ALL.append(self)
 
@@ -187,7 +205,9 @@ def wbs(folder, args, wbslist, depth):
         
 def make_ws_pretty(args, ws):
     #set columns to reasonable widths.
+    colno = 0
     for col in ws.columns:
+        colno +=1
         max_length = 0
         column = col[0].column # Get the column name
         for cell in col:
@@ -197,11 +217,19 @@ def make_ws_pretty(args, ws):
             except:
                 pass
             adjusted_width = (max_length + 2) * 1.2
+            maxwidth = 60
+            if colno > 8 : maxwidth = 20
             adjusted_width = min (adjusted_width, 60)
         ws.column_dimensions[column].width = adjusted_width
     return ws
 
 
+def get_header(args):
+    header = ["guid","wbs","element","documentation","location","enclave","unit"]
+    sql = "select distinct Pla_name  p from NODE_PLATEAU order by p  Asc"
+    for plateau in db.q(args, sql):
+        header.append(plateau[0].strip())
+    return header
         
 ###########################################################
 #
@@ -244,9 +272,16 @@ if __name__ == "__main__" :
     wb = Workbook() #make workbook
     ws = wb.active  #use default sheet
     rowno = 1
+    col = 1
+    for h in get_header(args):
+        ws.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
+        ws.cell(row=rowno, column=col, value=h)
+        col += 1
+    rowno = 2
     #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
-    
+
+
     #sets columns to resonable initial width, ets.
     make_ws_pretty(args, ws) 
     wb.save("dog.xlsx")
