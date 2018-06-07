@@ -119,7 +119,8 @@ class folderinfo :
                 worksheet.cell(row=rowno, column=col, value=element[item])
                 worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                 col += 1
-            #now mark all relevant plateaus    
+            #now mark all relevant plateaus
+            no_plateaus = True
             sql = "select distinct Pla_name  p from NODE_PLATEAU order by p  Asc"
             for plateau in  db.q(self.args,sql):
                 plateau = plateau[0]
@@ -128,7 +129,16 @@ class folderinfo :
                 if count > 0 :
                     worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
                     worksheet.cell(row=rowno, column=col, value=plateau.strip())
+                    no_plateaus = False
                 col +=1
+            if no_plateaus :
+                red_font = Font(color='00FF0000', italic=True)
+                worksheet.cell(row=rowno, column=1).font = red_font
+                worksheet.cell(row=rowno, column=2).font = red_font
+                worksheet.cell(row=rowno, column=3).font = red_font
+                worksheet.cell(row=rowno, column=4).font = red_font
+                worksheet.cell(row=rowno, column=5).font = red_font
+                worksheet.cell(row=rowno, column=6).font = red_font
             rowno += 1    
         return rowno
 
