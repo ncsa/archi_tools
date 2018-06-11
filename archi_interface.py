@@ -62,6 +62,8 @@ def cachepath(args):
             shutil.normal("made directory %s" % directory)
     return directory
 
+FFROM = "/Users/donaldp/Box Sync/astronomy-section/LSST/archi/Draft2.archimate"
+
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
       for file in ["elements.csv","relations.csv","properties.csv"]: 
@@ -69,14 +71,16 @@ def acquire(args):
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s to %s" % (ffrom, fto))
+            if abs(os.path.getmtime(ffrom) - os.path.getmtime(FFROM)) > 5*60:
+                shlog.warn("CSV file and archimate files differ by more than five minutes")
+                shlog.warn("************  DID YOU EXPORT PROPERLY????? ")
       acquire_archimate(args)
       
 def acquire_archimate(args):
       """Copy .archimate file from the working  area to the local cache"""
-      ffrom = "/Users/donaldp/Box Sync/astronomy-section/LSST/archi/Draft2.archimate"
       fto   = "Draft2.archimate"
-      shutil.copyfile(ffrom, fto)
-      shlog.normal("copied %s to %s" % (ffrom, fto))
+      shutil.copyfile(FFROM, fto)
+      shlog.normal("copied %s to %s" % (FFROM, fto))
        
 def acquire_openx(args):
     """ Copy open exchange format CSV to cache, then "fix" it

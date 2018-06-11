@@ -198,10 +198,10 @@ def mk_node_plateau(args):
              AND
              relations.type = "CompositionRelationship"
              AND
-             e2.type = "Node"
+             (e2.type = "Node"  OR e2.type = "Equipment"  OR e2.type = "Path") 
 
     """
-    shlog.normal ("Making  platwear node table ")
+    shlog.normal ("Making  plateau node table ")
     q(args, sql)
 
 
