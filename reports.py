@@ -165,7 +165,10 @@ class StanzaFactory:
                 unformatted_row_query_sql = segment.segment_sql
                 contexts = segment.context.context_list
                 for context in contexts:
+                    if row_query_sql_params == 'row_query_sql_params' : import pdb ; pdb.set_trace()
                     row_query_sql = unformatted_row_query_sql % row_query_sql_params
+                    shlog.debug(row_query_sql)
+                    shlog.debug(context)
                     row_query_sql = row_query_sql.format(**context)
                     if segment.many_to_many:
                         self.generate_many_to_many_segment(row_query_sql)
@@ -181,8 +184,11 @@ class StanzaFactory:
         #perform query and then populate successive cells in the
         #workspace row with the result
         segment_result = q(self.args, segment_sql).fetchone()
-        for s in segment_result:
-            self.workspace.add_element(s)
+        if segment_result:
+            for s in segment_result:
+                self.workspace.add_element(s)
+        else:
+            self.workspace.add_element("n/a")
             
     def generate_one_to_many_segment(self,segment_sql):
         #perform query and then catenate the list of results
@@ -217,6 +223,12 @@ def report(args):
     )
     Elements.add_report_segment(
         SegmentSQL("SELECT * from Elements Where id = '%s'")
+    )
+    
+    Elements.add_report_segment(
+       SegmentSQL("SELECT '{Plateau_name}' FROM relations WHERE source = '{Plateau_id}' and Target = '%s'",
+                   context = QueryContext(args,"SELECT id Plateau_id, name  Plateau_name  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
+        )
     )
 
     Folders.set_substanza (Elements)

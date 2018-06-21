@@ -139,6 +139,14 @@ folder_elementsTable.hfm       =[       t,        t]
 folder_elementsTable.hdt       =['  text',   'text']
 folder_elementsTable.check()
 
+#Record ID's that have been dual from CSV's to distinguich from those created.
+dualTable = SQLTable()
+dualTable.tableName = 'DUAL'
+dualTable.columns   =['Dummy']
+dualTable.hfm       =[     t ]
+dualTable.hdt       =['text']
+dualTable.check()
+
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
@@ -206,6 +214,8 @@ def mkdb (args):
     folderTable.mkTable(con)
     conventions.mkTables(args)  #modeling conventions
     folder_elementsTable.mkTable(con)
+    dualTable.mkTable(con)
+    q(args,"insert into dual values ('X')")
     return
 
 def ingest(args):
