@@ -4,12 +4,12 @@ This module implments a subset of logging I use for interactive commands.
 
 by default,  not suppressed are NORMAL, WARN and ERROR, meaning:
     NONE: Produce no output
-    NORMAL is comfort messages for the user.
     WARNING is for messages where someting not normal has occurred, but the program continues
     ERROR is for something that is "contract violating" and the program likely needs to termainate
 
+
 all meassages, including the trio NORMAL, WARNING and ERROR are suppressed by setting 
-the logging level to "NONE" It is not supported that the trio of NORMAL, WARNING and 
+the logging level to "NONE" It is not suported that the trio of NORMAL, WARNING and 
 ERROR  are  suppressed individually.
 
 Conceptually orthognal to  the triple of NORMAL, WARN and ERROR is verbosity. 
@@ -27,65 +27,89 @@ error wihtoug newlines that denote progress in a long computataion. shlog.dot() 
 are not implemented using the underlying python logging mechansim  They are implemented using writes to stdout. 
 
 """
+from __future__ import print_function
 import logging
+#import exception
+
+class NotConfigured(Exception):
+    pass
+    
+
 #
 # redefine log level text and sugar functions apropos for shell commands, not servers.
 # The underlying scheme is that higher the number the more silent the cose will be.
 #
-
-NONE=55
-NORMAL=logging.INFO   
-DOTS=logging.FATAL-1       # logging.FATAL is 50 at time of writing  Logging.CRITICAL IS 50
-WARNING=logging.WARNING     # logging.ERROR is 40  "               "  
-ERROR=logging.ERROR     # logging.ERROR is 40  "               "  
-VERBOSE=logging.WARNING  # logging.WARNING is 30 "              "
-VVERBOSE=logging.INFO    # logging.INFO is 20  "               "
-DEBUG=logging.DEBUG      # logging.DEBUG is 10  "             "
+CONFIGURED=False
+# the normal default for a use program shoudl be normal.
+NONE=55                  # Progams go not log at NONE user command lines use this to silence the logging facility
+ERROR=logging.FATAL      # Programs indicate contract violation; uses slines  normal and error messaging to jsut see error 
+WARNING=logging.WARNING  # Programs indicate this to indicte the program handles a condition of interest to a users. 
+NORMAL=logging.WARNING-1 # Programs isse comfort messages indicating progress and status "              "
+VERBOSE=logging.INFO    # Programs issue status messages indicicating an additional level of status and progress " 
+DEBUG=logging.DEBUG      # Programs issed very detailes messages, typically about interfaces of details of internaks" 
 
 
 LEVELDICT = {"NONE": NONE,
-             "NORMAL": NORMAL,
-             "DOTS" : DOTS,
-             "WARN": WARNING,
              "ERROR" : ERROR,
-             "VERBOSE": VERBOSE ,
-             "VVERBOSE": VVERBOSE,
+             "WARNING": WARNING,
+             "NORMAL": NORMAL,  
+             "VERBOSE": VERBOSE,
              "DEBUG": DEBUG}
 for (levelname, levelno) in LEVELDICT.items():
     logging.addLevelName(levelno, levelname)
 
-# re-using the standard logging gives all the sugar features of the logging modues
-# so create the "shlog.normal" function to be an alias of logging.normal, etc.
+# re-using the standard logging funtions gives all the sugar features of the
+# logging modues  so create the "shlog.normal" function to be an alias of
+# logging.normal, etc.
 normal = logging.fatal
-verbose = logging.warning
-vverbose = logging.info
+warning = logging.warning
+normal = logging.info
 debug = logging.debug
 
-def warn(msg, *args, **kwargs):
-    logging.log(LEVELDICT["WARN"], msg, *args, **kwargs)
 def error(msg, *args, **kwargs):
+    if not CONFIGURED : raise NotConfigured("shlog call before basicConfig call")    
     logging.log(LEVELDICT["ERROR"], msg, *args, **kwargs)
+    
+def warning(msg, *args, **kwargs):
+    if not CONFIGURED : raise NotConfigured("shlog call before basicConfig call")    
+    logging.log(LEVELDICT["WARNING"], msg, *args, **kwargs)
+    
+def normal(msg, *args, **kwargs):
+    if not CONFIGURED : raise NotConfigured("shlog call before basicConfig call")    
+    logging.log(LEVELDICT["NORMAL"], msg, *args, **kwargs)
+    
+def verbose(msg, *args, **kwargs):
+    if not CONFIGURED : raise NotConfigured("shlog call before basicConfig call")    
+    logging.log(LEVELDICT["VERBOSE"], msg, *args, **kwargs)
+    
+def debug(msg, *args, **kwargs):
+    if not CONFIGURED : raise NotConfigured("shlog call before basicConfig call")    
+    logging.log(LEVELDICT["DEBUG"], msg, *args, **kwargs)
 
+LOGHELP = "Logging Level: NONE, ERROR, WARNING, VERBOSE, DEBUG"
+"""
 def dot(symbol="."):
     #log progress dots, by default dots are a period (.)
     import sys
     loglevel = logging.root.getEffectiveLevel()
     if loglevel > DOTS : return 
-    #print(symbol, end="", file=sys.stderr)
+    print(symbol, end="", file=sys.stderr)
     
 def newline():
     #just a newline, useful if last dot is known and dots are printed
     import sys
     loglevel = logging.root.getEffectiveLevel()
     if loglevel > DOTS : return 
-    #print("",file=sys.stderr)
-
+    print("",file=sys.stderr)
+"""
 def basicConfig(**kwargs):
     # Call underlying loggger
+    global CONFIGURED
     logging.basicConfig(**kwargs)
+    CONFIGURED=True
     return
 
-helptext = "NONE, NORMAL, NDOTS, VERBOSE, VVERBOSE, DEBUG"
+helptext = "NONE, ERROR, WARNING, NORMAL, VERBOSE, DEBUG"
 
 if __name__ == "__main__":
 
@@ -104,12 +128,9 @@ if __name__ == "__main__":
     basicConfig(level=LEVELDICT[args.loglevel])
 
     #generate an outout for each message
-    normal("normal message")
-    warn("WARN")
-    error("ERROR")
-    for r in range (1,20): dot()
-    newline()
-    verbose("verbose message")
-    vverbose("verboser message")
-    debug("debug message")
+    error("ERROR Message")
+    warning("WARNING message")
+    normal("NORMAL message")
+    verbose("VERBOSE message")
+    debug("DEBUG message")
  

@@ -39,11 +39,12 @@ def q(args, sql):
 
 def mkTables(args):
     "Build tables at ingest time"
-    
     mk_requirements(args)
     mkserving(args) 
     mk_node_plateau(args)
     
+
+
 def mkserving(args):
     """
     Build a table, SERVING, that compiles the relationship of one application component

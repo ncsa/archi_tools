@@ -123,6 +123,22 @@ ingestedTable.hfm       =[        t,     t,           t]
 ingestedTable.hdt       =[   'text','text',      'text']
 ingestedTable.check()
 
+#Record ID's that have been folder from CSV's to distinguich from those created.
+folderTable = SQLTable()
+folderTable.tableName = 'FOLDER'
+folderTable.columns   =['Id'  ,'Type','Name','WBS' ,'Location','Documentation', 'Enclave', 'Units']
+folderTable.hfm       =[     t,     t,     t,     t,         t,            t,         t,      t ]
+folderTable.hdt       =['text','text','text','text',    'text',       'text',    'text', 'text' ]
+folderTable.check()
+
+#Record ID's that have been folder_elements from CSV's to distinguich from those created.
+folder_elementsTable = SQLTable()
+folder_elementsTable.tableName = 'FOLDER_ELEMENTS'
+folder_elementsTable.columns   =['Folder','Element']
+folder_elementsTable.hfm       =[       t,        t]
+folder_elementsTable.hdt       =['  text',   'text']
+folder_elementsTable.check()
+
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
@@ -187,6 +203,9 @@ def mkdb (args):
     propertiesTable.mkTable(con)
     ingestTable.mkTable(con)
     ingestedTable.mkTable(con)
+    folderTable.mkTable(con)
+    conventions.mkTables(args)  #modeling conventions
+    folder_elementsTable.mkTable(con)
     return
 
 def ingest(args):
@@ -203,7 +222,6 @@ def ingest(args):
             exit(1)
             
     #make tables from other modules
-    conventions.mkTables(args)  #modeling conventions
         
 def ingest_elements(args, csvfile):
         shlog.normal ("about to open %s",csvfile)

@@ -26,4 +26,14 @@ def q(args, sql):
     con.commit()
     return result
 
+def qp(args, sql, list_of_lists):
+    #a funnel routine for report queries, main benefit is query printing
+    con = sqlite3.connect(args.dbfile)
+    con.text_factory = lambda x: x.decode("utf-8")
+    cur = con.cursor()
+    shlog.verbose (sql)
+    result  = cur.executemany (sql,list_of_lists)
+    con.commit()
+    return result
+
 

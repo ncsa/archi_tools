@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-rocess an archi .archimate xml into
+process an archi .archimate xml into
 material needed for re-costing. 
 
 This is a stand-alone tool to generate a
@@ -11,7 +11,7 @@ folder hierarchy, including descriptions associated
 with the folder.
 
 Additional information is generated from information
-latent in the folder hierarchy. (e.g. wbs numbers)
+latent in the folder herarchy. (e.g. wbs numbers)
 
 It would be preferable to process an archimate
 standard openexchange file instead of the
@@ -80,6 +80,26 @@ class folderinfo :
                 item_dict["id"] = item[1]
         self.element_list.append(item_dict)
 
+    def ingest(self):
+        #Do the folder
+        insert_list = []
+        insert_list.append(self.d['id'])
+        insert_list.append(self.d['type'])
+        insert_list.append(self.d['name'])
+        insert_list.append(self.d['wbs'])
+        insert_list.append(self.d['location'])
+        insert_list.append(self.d['documentation'])
+        insert_list.append(self.d['enclave'])
+        insert_list.append(self.d['units'])
+        sql = """INSERT INTO FOLDER VALUES (?,?,?,?,?,?,?,?) """        
+        db.qp(self.args, sql, [insert_list])
+        #make associative table of folder - elements
+        sql = "INSERT INTO folder_elements VALUES (?,?)"
+        for  element_dict  in self.element_list:
+            #import pdb ; pdb.set_trace()
+            db.qp(self.args, sql, [[self.d['id'], element_dict['id']]] )
+            
+
     def append_excel(self, worksheet, rowno):
         col = 1
         #make line for folder information
@@ -124,7 +144,7 @@ class folderinfo :
             sql = "select distinct Pla_name  p from NODE_PLATEAU order by p  Asc"
             for plateau in  db.q(self.args,sql):
                 plateau = plateau[0]
-                sql = "select count(*) from  NODE_PLATEAU  where Node_id = '%s' and Pla_name  =  '%s' "  % (element["id"], plateau)
+                sql = "select count(*) from  NODE_PLATEAU  where Node_id = 'b%s' and Pla_name  =  '%s' "  % (element["id"], plateau)
                 count = db.q(self.args, sql).next()[0]
                 if count > 0 :
                     worksheet.cell(row=rowno, column=col).alignment = Alignment(wrapText=True)
@@ -144,6 +164,7 @@ class folderinfo :
 
     def complete(self):
         ALL.append(self)
+        self.ingest()
 
 def get_property (element, property):
     #return the fist key matching property, if no match return empty string.
@@ -267,7 +288,8 @@ if __name__ == "__main__" :
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
                              default="NONE")
     
-    main_parser.add_argument("--show", "-s", action='store_true', help="pop up excel to show the reult")    
+    main_parser.add_argument("--show",   "-s", action='store_true', help="pop up excel to show the reult")    
+    main_parser.add_argument("--ingest", "-i", action='store_true', help="load teh folders table in the database")    
     main_parser.add_argument("--prefix", "-p", default="LSST_")    
     main_parser.add_argument("archimatefile")
 
