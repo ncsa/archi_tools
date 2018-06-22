@@ -4,6 +4,7 @@ import shlog
 import argparse
 import sqlite3
 import collections
+import db
 # do not worry yet about rows that are composite.
 
 def q(args, sql):
@@ -24,6 +25,17 @@ def qtranspose(args, sql):
         results.append(result)
     return zip(*results)
 
+def qd(args, sql):
+    #return results of query as a list of dictionaries,
+    #one for each row. 
+    
+    con = sqlite3.connect(args.dbfile)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    shlog.verbose(sql)
+    results = cur.execute (sql)
+    shlog.normal(results)
+    return results
 
 class Workspace:
     """ Provde an in-memory workslae that can be rendered into excel, etc..."""
@@ -159,16 +171,20 @@ class StanzaFactory:
         
     def report(self, element_sql_params):
         #Outer loop -- this query givee query paremater to ideniify the subject of a row
-        for row_query_sql_params in q(args, self.element_sql % element_sql_params) :
+        for row_query_sql_params in qd(args, self.element_sql.format(**element_sql_params)) :
             self.workspace.next_row()
             for segment in self.report_segments:
                 unformatted_row_query_sql = segment.segment_sql
                 contexts = segment.context.context_list
                 for context in contexts:
-                    if row_query_sql_params == 'row_query_sql_params' : import pdb ; pdb.set_trace()
-                    row_query_sql = unformatted_row_query_sql % row_query_sql_params
+
+                    #import pdb; pdb.set_trace()
+                    merged_dict = {}
+                    merged_dict.update(row_query_sql_params)
+                    merged_dict.update(context)
+                    shlog.debug("formating: %s:%s" %(unformatted_row_query_sql, merged_dict.keys()))
+                    row_query_sql = unformatted_row_query_sql.format(**merged_dict)
                     shlog.debug(row_query_sql)
-                    shlog.debug(context)
                     row_query_sql = row_query_sql.format(**context)
                     if segment.many_to_many:
                         self.generate_many_to_many_segment(row_query_sql)
@@ -183,7 +199,7 @@ class StanzaFactory:
     def generate_many_to_many_segment(self,segment_sql):
         #perform query and then populate successive cells in the
         #workspace row with the result
-        segment_result = q(self.args, segment_sql).fetchone()
+        segment_result = qd(self.args, segment_sql).fetchone()
         if segment_result:
             for s in segment_result:
                 self.workspace.add_element(s)
@@ -211,23 +227,23 @@ def report(args):
     #folder factory
     #master  stanza -- loop over folders.
     Folders  = StanzaFactory(args,
-                             "SELECT Id from folder"
+                             "SELECT Id FID from folder"
     )
     Folders.add_report_segment(
-        SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '%s'")
+        SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '{FID}'")
     )
 
 
     Elements = StanzaFactory(args,
-                             "SELECT element from Folder_elements  where folder= '%s'"
+                             "SELECT Element from Folder_elements  where folder= '{FID}'"
     )
     Elements.add_report_segment(
-        SegmentSQL("SELECT * from Elements Where id = '%s'")
+        SegmentSQL("SELECT * from Elements Where id = '{Element}'")
     )
     
     Elements.add_report_segment(
-       SegmentSQL("SELECT '{Plateau_name}' FROM relations WHERE source = '{Plateau_id}' and Target = '%s'",
-                   context = QueryContext(args,"SELECT id Plateau_id, name  Plateau_name  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
+       SegmentSQL("SELECT '{PNAME}' FROM relations WHERE source = '{Plateau_id}' and Target = '{Element}'",
+                   context = QueryContext(args,"SELECT id Plateau_id, name PNAME  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
         )
     )
 
@@ -257,7 +273,7 @@ def report(args):
 #    )
 
     """
-    Folders.report([])        # now go make the report
+    Folders.report({})        # now go make the report
     #Folders.workspace.dump()
     if args.show: Folders.workspace.excel()
 
