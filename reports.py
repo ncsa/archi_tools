@@ -148,9 +148,9 @@ class QueryContext:
         shlog.verbose("new query context: %s", self.context_list)
     
 class SegmentSQL:
-        def __init__(self, segment_sql, many_to_many=True, context=QueryContext(None,None)):
+        def __init__(self, segment_sql, one_to_one=True, context=QueryContext(None,None)):
             self.segment_sql = segment_sql
-            self.many_to_many = many_to_many
+            self.one_to_one = one_to_one
             self.context = context  # an object
 
 class StanzaFactory:
@@ -194,8 +194,8 @@ class StanzaFactory:
                     row_query_sql = unformatted_row_query_sql.format(**merged_dict)
                     shlog.debug(row_query_sql)
                     row_query_sql = row_query_sql.format(**context)
-                    if segment.many_to_many:
-                        self.generate_many_to_many_segment(row_query_sql)
+                    if segment.one_to_one:
+                        self.generate_one_to_one_segment(row_query_sql)
                     else:
                         self.generate_one_to_many_segment(row_query_sql)
                     #done bulding this row, now build any substanza
@@ -204,7 +204,7 @@ class StanzaFactory:
                 self.substanza.report(row_query_sql_params)
         return self.workspace
     
-    def generate_many_to_many_segment(self,segment_sql):
+    def generate_one_to_one_segment(self,segment_sql):
         #perform query and then populate successive cells in the
         #workspace row with the result
         segment_result = qd(self.args, segment_sql).fetchone()
@@ -268,7 +268,7 @@ def report(args):
 
 
     Parameters.add_report_segment(
-        SegmentSQL("SELECT 'PARAMETERS',* from PARAMETERS Where id = '%s'", many_to_many=False)
+        SegmentSQL("SELECT 'PARAMETERS',* from PARAMETERS Where id = '%s'", one_to_one=False)
     )
      
     Contents.add_report_segment(
