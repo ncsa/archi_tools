@@ -49,13 +49,24 @@ def qd(args, sql):
     shlog.normal(results)
     return results
 
+def qdescription(args, sql):
+    con = sqlite3.connect(args.dbfile)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    shlog.verbose("description query %s" % sql)
+    results = cur.execute (sql)
+    description = [d[0] for d in cur.description]
+    shlog.verbose("description obtained  %s" % (description))
+    con.close()
+    return  description
+
 def query(args):
     for r in qd(args, args.sql):
-        print r
-        print type(r)
-        print r.keys()
-        print r['Dummy']
-        print 'formating {Dummy}'.format(**r)
+        shlog.normal("row: %s" % r)
+        shlog.normal("type: %s" % type(r))
+        shlog.normal("keys: %s" % r.keys())
+        shlog.normal("contents: %s" %",".join([r[k] for k in r.keys()]))
+    shlog.normal ("description: %s" % qdescription(args, args.sql))
 
 if __name__ == "__main__":
     #main_parser = argparse.ArgumentParser(add_help=False)

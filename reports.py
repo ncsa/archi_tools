@@ -5,6 +5,7 @@ import argparse
 import sqlite3
 import collections
 import db
+
 # do not worry yet about rows that are composite.
 
 def q(args, sql):
@@ -101,6 +102,13 @@ class Header:
     def __init__(self, args, header_list):
         self.args = args
         self.header_list = header_list
+    def report (self, _dummy):
+        pass
+
+class Padr:
+    def __init__(self, args, ncells):
+        self.args = args
+        self.ncells = ncells
     def report (self, _dummy):
         pass
 
@@ -204,7 +212,11 @@ class StanzaFactory:
             for s in segment_result:
                 self.workspace.add_element(s)
         else:
-            self.workspace.add_element("n/a")
+            # For this row nothing satifies the query
+            # Pad out for each parameter which would have
+            # had a return
+            for d in db.qdescription(self.args, segment_sql):
+                self.workspace.add_element("")
             
     def generate_one_to_many_segment(self,segment_sql):
         #perform query and then catenate the list of results
