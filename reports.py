@@ -35,31 +35,33 @@ def qd(args, sql):
     cur = con.cursor()
     shlog.verbose(sql)
     results = cur.execute (sql)
-    shlog.normal(results)
+    shlog.debug(results)
     return results
 
 class Workspace:
     """ Provde an in-memory workslae that can be rendered into excel, etc..."""
-    def __init__(self):
+    def __init__(self, args):
         # one-based index beacause you know, excel...:
         self.row = 0
         self.col = 0
         self.col_max = 0
+        self.args = args
         #self.content = collections.defaultdict(lambda x : "Empty")
         self.content={}
+        self.args=args
     def next_row(self):
         self.row = self.row+1
         #self.content[self.row] = collections.defaultdict(lambda x : "Empty")
         self.content[self.row] = {}
         self.col = 1
     def max_chars(self, colno):
-        #return the max characters in any cell witing a column, 0 for empty column 
+        #return the max characters in any cell within a column, 0 for empty column 
         max_chars = 0
         for rowno in range(self.row):
             if rowno in self.content.keys() and colno in self.content[rowno].keys():
                 #use python string as a proxy for numeric columns.
                 max_chars = max(max_chars,len("%s" % self.content[rowno][colno]))
-        shlog.normal("XXX %s %s" %  (colno, max_chars*2)) 
+        shlog.debug("XXX %s %s" %  (colno, max_chars*2)) 
         return max_chars
     def add_element(self, content_element):
         #add populate the curent celle on the current row.
@@ -81,7 +83,7 @@ class Workspace:
         #write the output to an excel file.  @ optionally pop up execl to see ot
         import xlsxwriter
         import os
-        workbook = xlsxwriter.Workbook('dog.xlsx')
+        workbook = xlsxwriter.Workbook(self.args.excelfile)
         worksheet = workbook.add_worksheet()
         #have to say bold to work to make wrap to work, hmm
         x = workbook.add_format({"text_wrap" : True,  "bold" : True })
@@ -95,8 +97,8 @@ class Workspace:
                 maxc = max(maxc, 1) # at least one char
                 worksheet.set_column(c,c, maxc)
         workbook.close()
-                       
-        if args.show : os.system('open -a "Microsoft Excel" dog.xlsx')
+        if self.args.show : os.system('open -a "Microsoft Excel" %s' % self.args.excelfile)
+             
 
 class Header:
     def __init__(self, args, header_list):
@@ -168,7 +170,7 @@ class StanzaFactory:
         self.report_segments = []
         # the substanza object is called to make sub stanza after each report line.
         # e.g self.substanza.report(element_id)
-        self.workspace = Workspace()
+        self.workspace = Workspace(self.args)
         self.substanza = None
 
     def add_report_segment(self, segment_sql):
@@ -179,7 +181,7 @@ class StanzaFactory:
         
     def report(self, element_sql_params):
         #Outer loop -- this query givee query paremater to ideniify the subject of a row
-        for row_query_sql_params in qd(args, self.element_sql.format(**element_sql_params)) :
+        for row_query_sql_params in qd(self.args, self.element_sql.format(**element_sql_params)) :
             self.workspace.next_row()
             for segment in self.report_segments:
                 unformatted_row_query_sql = segment.segment_sql
@@ -233,63 +235,6 @@ class StanzaFactory:
         delimiter = '\n'
         self.workspace.add_element(delimiter.join(answer))
         
-def report(args):
-
-
-    #folder factory
-    #master  stanza -- loop over folders.
-    Folders  = StanzaFactory(args,
-                             "SELECT Id FID from folder"
-    )
-    Folders.add_report_segment(
-        SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '{FID}'")
-    )
-
-
-    Elements = StanzaFactory(args,
-                             "SELECT Element from Folder_elements  where folder= '{FID}'"
-    )
-    Elements.add_report_segment(
-        SegmentSQL("SELECT * from Elements Where id = '{Element}'")
-    )
-    
-    Elements.add_report_segment(
-       SegmentSQL("SELECT '{PNAME}' FROM relations WHERE source = '{Plateau_id}' and Target = '{Element}'",
-                   context = QueryContext(args,"SELECT id Plateau_id, name PNAME  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
-        )
-    )
-
-    Folders.set_substanza (Elements)
-
-    """    # find parmeters from the parent stanza
-    Parameters = StanzaFactory(args,
-                               "SELECT  '%s'  FROM DUAL"
-    )
-
-
-    Parameters.add_report_segment(
-        SegmentSQL("SELECT 'PARAMETERS',* from PARAMETERS Where id = '%s'", one_to_one=False)
-    )
-     
-    Contents.add_report_segment(
-         SegmentSQL("SELECT 'CONTENTS:', * from Contents where Id='%s'")
-    )
-    #    Contents.set_substanza(Parameters)
-
-
-
-#    Folders.add_report_segment(
-#        SegmentSQL("select count(*) from DUAL where dummy = '{PID}' and dummy = '%s'",
-#                   context = QueryContext(args,"select ID PID from Parameters")
-#        )
-#    )
-
-    """
-    Folders.report({})        # now go make the report
-    #Folders.workspace.dump()
-    if args.show: Folders.workspace.excel()
-
-
 
 if __name__ == "__main__":
 
@@ -309,10 +254,11 @@ if __name__ == "__main__":
     
 
     #Subcommand  to  make a report 
-    report_parser = subparsers.add_parser('report', help=report.__doc__)
-    report_parser.set_defaults(func=report )  
-    report_parser.add_argument("--force", "-f", help="remove existing db file of the same name", default=False, action='store_true')
+    report_parser = subparsers.add_parser('report')
     report_parser.add_argument("--show" , "-s", help="show result in excel", default=False, action='store_true')
+    report_parser.add_argument("--function" , "-f", help="def: modulename",default=None)
+    report_parser.add_argument("--excelfile" , "-e", help="def: modulename.xslx",default=None)
+    report_parser.add_argument("module" , help="obtain report definition from this module")
 
   
     args = main_parser.parse_args()
@@ -325,7 +271,18 @@ if __name__ == "__main__":
     assert type(loglevel) == type(1)
     shlog.basicConfig(level=shlog.__dict__[args.loglevel])
     shlog.normal("Database is %s" % args.dbfile)
-    if not args.func:  # there are no subfunctions
-        main_parser.print_help()
+    if ".py" in args.module:
+        shlog.error("Module names do not contain the >py suffix")
         exit(1)
-    args.func(args)
+    if not args.function: args.function = args.module 
+    if not args.excelfile: args.excelfile = args.module + ".xlsx" 
+
+    module = __import__(args.module)
+    if args.function not in module.__dict__.keys():
+        shlog.error("%s is not a function within module %s" % (args.function, args.module))
+        exit(2)
+
+    rpt = module.__dict__[args.function](args)
+    rpt.workspace.excel()
+    exit(0)
+
