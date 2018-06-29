@@ -87,7 +87,9 @@ class Workspace:
         worksheet = workbook.add_worksheet()
         #have to say bold to work to make wrap to work, hmm
         x = workbook.add_format({"text_wrap" : True,  "bold" : True })
-        for r in range(1,self.row):
+        for r in range(1,self.row+1):
+            shlog.debug("content:%s", self.content)
+            shlog.debug("writing excel row: %s" % r)
             keys = self.content[r].keys()
             for c in keys:
                 worksheet.write(r, c, self.content[r][c], x)
