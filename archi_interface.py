@@ -72,8 +72,8 @@ def acquire(args):
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s to %s" % (ffrom, fto))
             if abs(os.path.getmtime(ffrom) - os.path.getmtime(FFROM)) > 5*60:
-                shlog.warn("CSV file and archimate files differ by more than five minutes")
-                shlog.warn("************  DID YOU EXPORT PROPERLY????? ")
+                shlog.warning("CSV file and archimate files differ by more than five minutes")
+                shlog.warning("************  DID YOU EXPORT PROPERLY????? ")
       acquire_archimate(args)
       
 def acquire_archimate(args):
