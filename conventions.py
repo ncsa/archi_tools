@@ -42,7 +42,7 @@ def mkTables(args):
     mk_requirements(args)
     mkserving(args) 
     mk_node_plateau(args)
-    
+    mk_policy_to_file(args)    
 
 
 def mkserving(args):
@@ -141,6 +141,40 @@ def mk_requirements(args):
     q(args, sql)
 
 
+def mk_policy_to_file(args):
+    """
+    aake a convenience tabel linking ddad managemnt policies to files managed by the policies
+    """
+    sql = """
+      CREATE TABLE
+           POLICY_TO_FILE AS  
+       SELECT
+          contract.name policy_name ,
+          file.name file_name,
+          contract.id policy_id,
+          association.target file_id,
+          access.name access_type
+      FROM
+               elements contract
+          JOIN relations association
+          JOIN elements applicationprocess
+          JOIN relations access
+          JOIN elements file 
+       WHERE
+          (
+                contract.type='Contract'
+            AND association.type='AssociationRelationship'
+            AND contract.id=association.source
+            AND association.target=applicationprocess.id
+            AND access.source=applicationprocess.id
+            AND access.target=file.id
+
+        )
+
+ """
+    shlog.normal ("Making table linking DM policy to data files  ")
+    q(args, sql)
+    
 def x_relationships(args):
     """
     Make an expanded relationships table is flattened and also is restriected to relationship
