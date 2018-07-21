@@ -212,7 +212,6 @@ def mkdb (args):
     ingestTable.mkTable(con)
     ingestedTable.mkTable(con)
     folderTable.mkTable(con)
-    conventions.mkTables(args)  #modeling conventions
     folder_elementsTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
@@ -232,6 +231,7 @@ def ingest(args):
             exit(1)
             
     #make tables from other modules
+    conventions.mkTables(args)  #modeling conventions
         
 def ingest_elements(args, csvfile):
         shlog.normal ("about to open %s",csvfile)
