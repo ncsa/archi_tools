@@ -1,5 +1,19 @@
 Archi_tool is a set of scripts to load information from
-an archimate model  rsting in the archi_tool.
+an archimate model resideing in the archi_tool.
+
+The tool makes a working databse from an archimate model,
+and extends that.   Various repoets can be
+produces and used in day to day management tasks.
+
+Configuration stuff.
+===================
+
+The software is in an early state. Early users
+are managers using macs. The primary version
+of python used is 2.7, since 2.7 is shipped
+with the current macos. Efforts are made to
+accomidate python 3, but testing is nor normally done
+on python 3.
 
 The primary functions implemented in teh tool are:
 
