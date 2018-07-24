@@ -74,11 +74,12 @@ Getting to a usable database.
 
 Having done the above steps of export and acquire
 
-- ./archi_tool -p mkdb   #deletes prior database and makes a new, empty db
-- ./archi_tool -p ingest #ingest csv into the data and makes supplemental info
--  ./ldm -p xxx_yyy  --ingest file.archimate #ingest information about folders
+- ./archi_tool -p DEMAND_ mkdb   #deletes prior database and makes a new, empty db
+- ./archi_tool -p DEMAND_ ingest #ingest csv into the data and makes supplemental info
+- ./ldm -p DEMAND  --ingest file.archimate #ingest information about folders
+
 The extra tables are build on assumptions about the  modeling
-methodologies and conventions used.
+methodologies and conventions used.  The -l flag 
 
 Modeling Conventions supported.
 -------------------------------

@@ -290,12 +290,13 @@ if __name__ == "__main__" :
     
     main_parser.add_argument("--show",   "-s", action='store_true', help="pop up excel to show the reult")    
     main_parser.add_argument("--ingest", "-i", action='store_true', help="load teh folders table in the database")    
-    main_parser.add_argument("--prefix", "-p", default="LSST_")    
+    main_parser.add_argument("--prefix", "-p", default="LSST_")
     main_parser.add_argument("archimatefile")
 
     args = main_parser.parse_args()
     shlog.basicConfig(level=shlog.__dict__[args.loglevel])
-    args.dbfile = "LSST_archi_tool.db"  #HACK
+    args.dbfile = args.prefix + "archi_tool.db"
+    shlog.normal ("using database %s", args.dbfile)
     tree = ET.parse(args.archimatefile)
     root = tree.getroot()
     wbs(root, args, [], 0)
@@ -313,8 +314,6 @@ if __name__ == "__main__" :
     rowno = 2
     #build the workbook
     for row in ALL: rowno = row.append_excel(ws, rowno)
-
-
     #sets columns to resonable initial width, ets.
     make_ws_pretty(args, ws) 
     wb.save("dog.xlsx")
