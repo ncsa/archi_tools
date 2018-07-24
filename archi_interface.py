@@ -38,9 +38,9 @@ import re
 #
 ############################################################
 
-
-DOWNLOAD_ROOT = "/Users/donaldp/export"   # hack for now
-VAULT_ROOT= "/Users/donaldp/archi_tool/cache"  # hack for now
+import os 
+DOWNLOAD_ROOT = os.path.join(os.environ["HOME"],"export")   # hack for now
+VAULT_ROOT= "cache"  # hack for now
 
 def cleanxml(args):
     purge='xmlns="http://www.opengroup.org/xsd/archimate/3.0/"'
