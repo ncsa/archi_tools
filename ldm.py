@@ -30,6 +30,7 @@ import argparse
 import collections
 import db
 import shlog
+import os
 
 prefix='{http://www.opengroup.org/xsd/archimate/3.0/}'
 #tree = ET.parse('LSST.xml')
@@ -291,9 +292,10 @@ if __name__ == "__main__" :
     main_parser.add_argument("--show",   "-s", action='store_true', help="pop up excel to show the reult")    
     main_parser.add_argument("--ingest", "-i", action='store_true', help="load teh folders table in the database")    
     main_parser.add_argument("--prefix", "-p", default="LSST_")
-    main_parser.add_argument("archimatefile")
+    #main_parser.add_argument("archimatefile")
 
     args = main_parser.parse_args()
+    args.archimatefile = os.path.join("cache",args.prefix,"ingested.archimate")
     shlog.basicConfig(level=shlog.__dict__[args.loglevel])
     args.dbfile = args.prefix + "archi_tool.db"
     shlog.normal ("using database %s", args.dbfile)

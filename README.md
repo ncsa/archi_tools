@@ -55,7 +55,7 @@ for the DEMAND_ prefix.
 caches of an archimate CSV export. Conventionally, you would export these
 csv files in $HOME/export, e.g an export directory in your home area.  The
 
-$archi_tool acquire
+$archi_tool acquire  <archimate file>
 
 command moves these these files into the appropriate cache directory.
 to obtain stable inputs for downstream tool chains.
