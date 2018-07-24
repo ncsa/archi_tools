@@ -66,7 +66,7 @@ def cachepath(args):
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
       for file in ["elements.csv","relations.csv","properties.csv"]: 
-            ffrom = os.path.join(args.export_area,args.prefix + file)
+            ffrom = os.path.join(os.environ["HOME"],'export',args.prefix + file)
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s to %s" % (ffrom, fto))
@@ -83,36 +83,6 @@ def acquire_archimate(args):
       shutil.copyfile(args.archifile, fto)
       shlog.normal("copied %s to %s" % (args.archifile, fto))
        
-def acquire_openx(args):
-    """ Copy open exchange format CSV to cache, then "fix" it
-
-    NOTE: This procedure assumes the openexchange file is
-    called  <PREFIX>openexchange.xml, eg DES_openexchange.xml
-    in the export area.
-
-    This procedure also "fixes" things needed to process
-    the file via XSLT -- remove a line that seems to
-    break XSLT processing, and adding an static line
-    for rendering.  These features need to be exercised.
-    """
-    fn = args.prefix + "openexchange.xml"
-    ffrom = os.path.join(args.export_area,fn)
-    fto = os.path.join(cachepath(args),fn)
-    shutil.copyfile(ffrom, fto)
-    shlog.normal("cached ffom: %s to %s"  % (ffrom,fto))
-    f = open(fto,'r')
-    ff = open("dog.xml","wb")
-    lineno = 0
-
-    # Read in file and apply "fixes"
-    for line in f.readlines():
-        lineno  += 1
-        #add a static XSLT line
-        if lineno == 1 : line = line + '<?xml-stylesheet type="text/xsl" href="/Users/donaldp/export/LSST.xsl"?>'
-        # This text needs to be removed for XSLT to work (never understood why)
-        line=line.replace('xmlns="http://www.opengroup.org/xsd/archimate/3.0/"','')
-        print (line)
-        ff.write(line)
 
 ###########################################################
 #
@@ -199,20 +169,8 @@ def parsers(subparsers):
     #Acquire files from the working area to the cache
     acquire_parser = subparsers.add_parser('acquire', description=acquire.__doc__)
     acquire_parser.set_defaults(func=acquire)
-    acquire_parser.add_argument("--export_area", "-e",
-              help="export directory",default="/Users/donaldp/export/" )
-    acquire_parser.add_argument("--cache", "-c",
-              help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
     acquire_parser.add_argument("archifile",
               help="path to .archimate file corresponding csv's")
-
-    #Acquire_Openx files from the working area to the cache
-    acquire_openx_parser = subparsers.add_parser('acquire_openx', description=acquire_openx.__doc__)
-    acquire_openx_parser.set_defaults(func=acquire_openx)
-    acquire_openx_parser.add_argument("--export_area", "-e",
-              help="export directory",default="/Users/donaldp/export/" )
-    acquire_openx_parser.add_argument("--cache", "-c",
-              help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
 
     #Forget all Archimate modles, allow for a clean start of archiante
     forget_parser = subparsers.add_parser('forget', description=forget.__doc__)
