@@ -62,7 +62,6 @@ def cachepath(args):
             shlog.normal("made directory %s" % directory)
     return directory
 
-FFROM = "/Users/donaldp/Box Sync/astronomy-section/LSST/archi/Draft2.archimate"
 
 def acquire(args):
       """Copy CSV files from the export area to the local cache"""
@@ -71,16 +70,18 @@ def acquire(args):
             fto = os.path.join(cachepath(args),args.prefix + file)
             shutil.copyfile(ffrom, fto)
             shlog.normal("cached: %s to %s" % (ffrom, fto))
-            if abs(os.path.getmtime(ffrom) - os.path.getmtime(FFROM)) > 5*60:
+            """
+            if abs(os.path.getmtime(ffrom) - os.path.getmtime(args.archifile)) > 5*60:
                 shlog.warning("CSV file and archimate files differ by more than five minutes")
                 shlog.warning("************  DID YOU EXPORT PROPERLY????? ")
+            """
       acquire_archimate(args)
       
 def acquire_archimate(args):
       """Copy .archimate file from the working  area to the local cache"""
-      fto   = "Draft2.archimate"
-      shutil.copyfile(FFROM, fto)
-      shlog.normal("copied %s to %s" % (FFROM, fto))
+      fto   = os.path.join("cache",args.prefix,"ingested.archimate")
+      shutil.copyfile(args.archifile, fto)
+      shlog.normal("copied %s to %s" % (args.archifile, fto))
        
 def acquire_openx(args):
     """ Copy open exchange format CSV to cache, then "fix" it
@@ -202,6 +203,8 @@ def parsers(subparsers):
               help="export directory",default="/Users/donaldp/export/" )
     acquire_parser.add_argument("--cache", "-c",
               help="working cache directory",default="/Users/donaldp/archi_tool/cache/" )
+    acquire_parser.add_argument("archifile",
+              help="path to .archimate file corresponding csv's")
 
     #Acquire_Openx files from the working area to the cache
     acquire_openx_parser = subparsers.add_parser('acquire_openx', description=acquire_openx.__doc__)
