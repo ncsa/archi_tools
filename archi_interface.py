@@ -59,7 +59,7 @@ def cachepath(args):
             os.stat(directory)
     except:
             os.mkdir(directory)
-            shutil.normal("made directory %s" % directory)
+            shlog.normal("made directory %s" % directory)
     return directory
 
 FFROM = "/Users/donaldp/Box Sync/astronomy-section/LSST/archi/Draft2.archimate"
