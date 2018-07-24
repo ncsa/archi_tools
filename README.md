@@ -1,12 +1,12 @@
 Archi_tool is a set of scripts to load information from
-an archimate model resideing in the archi_tool.
+an archimate model residing in the archi_tool.
 
-The tool makes a working databse from an archimate model,
-and extends that.   Gols:
+The tool makes a working database from an archimate model,
+and extends that.   Goals:
 
 - Various reports can be produced and used in day to day management tasks.
-- Logical Architecture transfer  to a configuration managment tool.
-- Component model to feed a financial managemetn tool.
+- Logical Architecture transfer  to a configuration management tool.
+- Component model to feed a financial management tool.
 - Component model for a first cut work breakdown structure.
 - Component model for fault trees and other material.
 
@@ -18,13 +18,13 @@ Software Installation stuff.
 The software is in an early state. Early users
 are managers using macs. Since 2.7 is shipped with
 the current macos, The primary version of python
-used is 2.7, Efforts are made to accomidate python 3,
+used is 2.7, Efforts are made to accommodate python 3,
 but testing is not normally done on python 3.
 
 Also, efforts are current made to package all the
-underpinnings as copied into the archi_tool pacakge. 
+underpinnings as copied into the archi_tool package. 
 
-At the current level of development the archi_tool softeare is
+At the current level of development the archi_tool software is
 run from the directory holding the software.  Archi_tool software
 is distributed via git as follows:
 
@@ -34,14 +34,14 @@ $ git clone https://github.com/ncsa/archi_tools.git
 --update an archi_tool directory with new stuff.
 $git pull origin master
 
-Runtime Conventions
+Run-time Conventions
 -------------------
 Archi_tool allows for working with several archimate models.  Each
 model is denoted by a prefix. By convention, this is a string
 of capital letters followed by an underscore.  DES_  and LSST_ are
 examples of conventionally formed prefixes.
 
-Archi_tool uses the prefix to aquire, cache and identify data files
+Archi_tool uses the prefix to acquire, cache and identify data files
 associated with a model.   Current conventions are:
 
 0- Current working directory is the archi_tools directory produced
@@ -55,7 +55,7 @@ for the DEMAND_ prefix.
 caches of an archimate CSV export. Conventionally, you would export these
 csv files in $HOME/export, e.g an export directory in your home area.  The
 
-$archi_tool aquire
+$archi_tool acquire
 
 command moves these these files into the appropriate cache directory.
 to obtain stable inputs for downstream tool chains.
@@ -64,21 +64,20 @@ to obtain stable inputs for downstream tool chains.
 $ls cache/DEMAND_/
 DEMAND_elements.csv     DEMAND_properties.csv   DEMAND_relations.csv
 
-Finally (and not regular w.r.t the overall deisgn pattern you need to know
+Finally (and not regular w.r.t the overall design pattern you need to know
 where the archimate file corresponding to the .csv files are.
 
-oll of this is not a good practive but is where the software is.
+all of this is not a good practice but is where the software is.
 
-Getting to a useable database.
+Getting to a usable database.
 ==============================
 
 Having done the above steps of export and acquire
 
-$ ./archi_tool -p mkdb   #deletes prior database and makes a new, empty db
-$ ./archi_tool -p ingest #Ingest csvs into the data and makes supplimental info
-$ ./ldm -p xxx_yyy  --ingest file.archimate  # ingest information about folders
-
-The extra tables are build on assumtions about the  modeling
+- ./archi_tool -p mkdb   #deletes prior database and makes a new, empty db
+- ./archi_tool -p ingest #ingest csv into the data and makes supplemental info
+-  ./ldm -p xxx_yyy  --ingest file.archimate #ingest information about folders
+The extra tables are build on assumptions about the  modeling
 methodologies and conventions used.
 
 Modeling Conventions supported.
@@ -89,6 +88,6 @@ need prose here.
 Reporting
 ---------
 
-Provides with archi_tool is a small python pacakge, called reports.py.
+Provides with archi_tool is a small python package, called reports.py.
 
 (document this)
