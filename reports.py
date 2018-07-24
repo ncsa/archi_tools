@@ -6,7 +6,7 @@ import sqlite3
 import collections
 import db
 
-# do not worry yet about rows that are composite.
+#  do not worry yet about rows that are composite.
 
 def q(args, sql):
     con = sqlite3.connect(args.dbfile)
