@@ -1,17 +1,20 @@
-# Arci_Tool
+# Archi_Tool
 Archi_tool is a set of scripts to load information from
 an archimate model int a sqlite databse, where the data
-can hten be used to achieve the following goals::
+can hten be used to achieve the following goals:
 
 - Produce  reports used in day to day management tasks.
-- Logical Architecture transfer to aconfiguration management tool.
-- Component model to feed a financial management tool.
-- Component model for a first cut work breakdown structure.
-- Component model for fault trees and other material.
+- Asperational goals:
+  - Logical Architecture transfer to a configuration management tool.
+  - Component model to feed a financial management tool.
+  - Component model for a first cut work breakdown structure for a change.
+  - Component model for fault trees and other material.
 
-*The tools is very much a work in progress, evolving weekly*
+*The tool is very much a work in progress, evolving as needed*
 
-## Software Installation
+## Build a database to support reporting and data interchange
+
+### Software Installation
 
 The software is in an early state. Early users
 are managers using macs. Since 2.7 is shipped with
@@ -44,7 +47,7 @@ Update from the current git master branch.
 $git pull origin master
 ```
 
-## Run-time Conventions
+### Run-time Conventions
 
 Archi_tool allows for working with several archimate models.  Each
 model is denoted by a prefix. By convention, this is a string
@@ -58,13 +61,13 @@ associated with a model.   Current conventions are:
 by the *git clone*.
 
 1. Archi_tools corrently depends on Exporets of Archi .csv files. The
-suported convention is to:
-         1.  Export the CSV files into $HOME/Export
-         1.  Export the files wiht a meaningful prefix, ending in an underscore, e.g. DES_
+supported convention is to:
+         - Export the CSV files into $HOME/Export
+         - Export the files wiht a meaningful prefix, ending in an underscore, e.g. DES_
 
 1. To provide a directory in the default directory named *cache*. Achi_tool copies working files there.
 
-1. After suitable invocations of archi_tool, An sqlite database is created in the current working directory, named. <prefix>archi_tool.db, for example DEMAND_archi_tool.db
+1. After suitable invocations of archi_tool, An sqlite database is created in the current working directory, named `<prefix>archi_tool.db`, for example DEMAND_archi_tool.db
 for the DEMAND_ prefix.
 
 ```shell
@@ -88,14 +91,15 @@ ingested.archimate
 
 All of this is not a good practice but is where the software is.
 
-## Generating to a usable database.
+### Generating a usable database.
 
 Having done the above steps of export and acquire
-`''shell
+```shell
 $ ./archi_tool -p DEMAND_ mkdb   #deletes prior database and makes a new, empty db
 $ ./archi_tool -p DEMAND_ ingest #ingest csv into the data and makes supplemental info
 $ ./ldm -p DEMAND  --ingest file.archimate #ingest information about folders
-`''
+```
+
 Extra tables are built on assumptions about the  modeling
 methodologies and conventions used.  The currently supported
 conventions are defiend and implemented in conventions.py 
