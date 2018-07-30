@@ -78,9 +78,10 @@ to propagate to the databse, you mush re-acquire the relevant files.
 
 ```
 #example 
-$archi_tool -p DEMAND_ acquire  /usr/donaldp..../demand.archimate
-#cd archi_tool
-$ls cache/DEMAND_/
+#cd archi_tool get the stuff exported from archi
+$ archi_tool -p DEMAND_ acquire  /usr/donaldp..../demand.archimate
+# look at the files that were acquired
+$ ls cache/DEMAND_ 
 DEMAND_elements.csv     DEMAND_properties.csv   DEMAND_relations.csv
 ingested.archimate
 ```
@@ -100,7 +101,7 @@ methodologies and conventions used.  The currently supported
 conventions are defiend and implemented in conventions.py 
 
 
-#Reporting
+# Heirarchical Report Generator
 
 reports.py is small python report generator provided with archi_tools.
 An individual report is specified by coding a small python subroutine
@@ -108,4 +109,52 @@ which declares objects and relates them to a master object, and
 returns the master object as the function returned.
 
 
-(document this)
+
+### StanzaFactory
+A stanza defines a line in a report. A stanzaFactory is an object tha creates many stanzas base on SQL queries. In fact, A stanza is defined by three types of SQL queries.  All of these queries relate to a single subject.  A line about a particular subject may optionally be followed by a substanza  where each line contains inforamation about a different sort of subject.
+
+The idea directories and files is an intuitive example that illustrates the concept.  the tool can generte a report about each folder in a directory tree.  Each Stanza of the report would contain a line about some particular directory,after that lines, there would be additional lines about the files in each folder.  The high-level stanzas are about the subject of *folders*, each report line about a folder containes a report line about a *file* in a directory.
+
+#### Subject Query
+A subject query defines an ordered list of subjects that are to be reported on. The Quaery yield parameters needed to identify a subject for each line in a report. The subjet Query is passed to a contructor of a StanzaFactory object in its constructor.
+
+
+```python
+        Folders = StanzaFactory("SELECT id FROM Folders ORDER BY folder_number")
+        ```
+
+In the above example, The StanzaFactory eventually generates a report where there is a line for each folder.  Evidently the returned *id* will be sufficient to locate the particular folder for a particular line in a report.
+
+#### Queries to Generate a Report about a Specifc Subject
+Reports about a specifc subect are realized in a row of a report. It may take more than one SQL query to generate the information needed in a report of a specfic subject. The results of each such query is called a segment. These ideas are implemented in the following way: Each Stanzafacory object reports about a given row.  The rows are composed by one of more segments. Each segment is defined by the output of a segment query. The segment queries use the sql parameters emitted by the subject query, discussed above, to identify the specifc subject for the row current being generated.
+
+Segment queries are stored in a list. Segments are generated in left to right order, with the first added report segment being the left-most segement of the report. Each returned item frem the select statement is rendered as its own internal cell.  I.e each slected itme would be in its own cell in a report rendered as a spreadsheet.
+
+```python
+     Folders.add_report_segment(
+         SegmentSQL("SELECT id, depth from Folders where id = '%s'")
+     )
+```
+In the above example, the internal database ID, depth of folder in a heirarcy, and name of folder are reported. To generate a specifinc line the %s is replaces wth the id produced by the Subject query, describe in the previous section.
+
+### Additional Context for a Segment Query.
+
+Often an SQL query to generate a report needs more information that that the parameters that  describe the subject of a row. Also, sometiems the precise number of cells in a segment can vary. In each case, case additional context is needed. A query supporting additional context can be supplied the the *SegmentSQL* object constructor by the optional *context* argument.
+
+```python
+    Folders.add_report_segment("....",
+        vcontext = QueryContext(args,"select ID from Parameters")
+   )
+```
+When context is supplied, the SegmentSQL is repeated for each row returned by the context query.  The context query, above, causes a rwo to be genertes for each pararmeter. for each such colum the ID is the paratmeter is available as well as the parameters defining the subject of a row.     More later....
+
+### Substanzas
+```python
+     Folders  = StanzaFactory(args,
+         "SELECT Id from folders order by DEPTH"
+     )
+    Contents = StanzaFactory(args,
+        "SELECT id from Contents where FolderId= '%s'
+     )
+     Folders.set_substanza (Contents)                                                                                         ```
+                                                                                                                             
