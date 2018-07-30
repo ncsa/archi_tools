@@ -1,3 +1,4 @@
+# Arci_Tool
 Archi_tool is a set of scripts to load information from
 an archimate model int a sqlite databse, where the data
 can hten be used to achieve the following goals::
@@ -10,8 +11,7 @@ can hten be used to achieve the following goals::
 
 *The tools is very much a work in progress, evolving weekly*
 
-Software Installation
-=====================
+## Software Installation
 
 The software is in an early state. Early users
 are managers using macs. Since 2.7 is shipped with
@@ -32,19 +32,19 @@ At the current level of development the archi_tool software is
 run from the directory holding the software.  Archi_tool software
 is distributed via git as follows:
 
-```
+```shell
 #Make an initial  archi_tool directory a filled with archi_tool stuff.
 $ git clone https://github.com/ncsa/archi_tools.git
 ```
 
 Update from the current git master branch. 
 
-```
+```shell
 #update an archi_tool directory with new stuff.
 $git pull origin master
 ```
 
-#Run-time Conventions
+## Run-time Conventions
 
 Archi_tool allows for working with several archimate models.  Each
 model is denoted by a prefix. By convention, this is a string
@@ -67,7 +67,7 @@ suported convention is to:
 1. After suitable invocations of archi_tool, An sqlite database is created in the current working directory, named. <prefix>archi_tool.db, for example DEMAND_archi_tool.db
 for the DEMAND_ prefix.
 
-```
+```shell
 $archi_tool -p <prefix> acquire  <archimate file>
 ```
 
@@ -76,7 +76,7 @@ directory named by the prefix.  These files provide stable inputs for
 downstream tool chains.  If you update achimate, and want the updates
 to propagate to the databse, you mush re-acquire the relevant files.
 
-```
+```shell
 #example 
 #cd archi_tool get the stuff exported from archi
 $ archi_tool -p DEMAND_ acquire  /usr/donaldp..../demand.archimate
@@ -88,20 +88,20 @@ ingested.archimate
 
 All of this is not a good practice but is where the software is.
 
-#Getting to a usable database.
+## Generating to a usable database.
 
 Having done the above steps of export and acquire
-`
+`''shell
 $ ./archi_tool -p DEMAND_ mkdb   #deletes prior database and makes a new, empty db
 $ ./archi_tool -p DEMAND_ ingest #ingest csv into the data and makes supplemental info
 $ ./ldm -p DEMAND  --ingest file.archimate #ingest information about folders
-`
+`''
 Extra tables are built on assumptions about the  modeling
 methodologies and conventions used.  The currently supported
 conventions are defiend and implemented in conventions.py 
 
 
-# Heirarchical Report Generator
+## Heirarchical Report Generator
 
 reports.py is small python report generator provided with archi_tools.
 An individual report is specified by coding a small python subroutine
