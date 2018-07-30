@@ -112,13 +112,77 @@ An individual report is specified by coding a small python subroutine
 which declares objects and relates them to a master object, and
 returns the master object as the function returned.
 
+The basic staps are:
+- Work with your default set in the archi_tools direcotory
+- Compose a report as a pythin file, conventionally named `<topic>_report.py` in the archimate directory
+- run `$ ./reports.py` to make a report as an excel file (optionially automatically running excel to display the report).
+
+Example:
+
+```shell
+# cd archi_tool
+# Assimtion You have built the databse for a a archi
+$ ./reports.py -d DEMAND_archi_tool.db report plateau_report.py
+```
+### Report Specification
 
 
-### StanzaFactory
+
+#### StanzaFactory
 A stanza defines a line in a report. A stanzaFactory is an object tha creates many stanzas base on SQL queries. In fact, A stanza is defined by three types of SQL queries.  All of these queries relate to a single subject.  A line about a particular subject may optionally be followed by a substanza  where each line contains inforamation about a different sort of subject.
 
 The idea directories and files is an intuitive example that illustrates the concept.  the tool can generte a report about each folder in a directory tree.  Each Stanza of the report would contain a line about some particular directory,after that lines, there would be additional lines about the files in each folder.  The high-level stanzas are about the subject of *folders*, each report line about a folder containes a report line about a *file* in a directory.
 
+###  Example report
+
+```Python
+from reports import *
+
+def plateau_report(args):
+
+    ### The top level organization of this reproet wil be by folder.
+    ### Write a query getting the folders, and let FID be a name know to archi_tool..
+    ###  .. as lj a name referrfin to each folder as it is processed.
+    Folders  = StanzaFactory(args,
+                             "SELECT Id FID from folder"
+    )
+    
+    ###  For each folder, print  the output of this slect statement...
+    ###  ... in distinct columsn  of the report.
+    Folders.add_report_segment(
+        SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '{FID}'")
+    )
+
+    ####
+    #   Below a line for a folder, make additional lines, one for each element in the folder
+    ####
+
+    # Let eachlement in the folder be know as ELE as it is processed.
+    Elements = StanzaFactory(args,
+                             "SELECT Element ELE from Folder_elements  where folder= '{FID}'"
+    )
+    
+    # The left-most columns for the elemet are all the arrtibutes of the element itslet.
+    Elements.add_report_segment(
+        SegmentSQL("SELECT * from Elements Where id = '{ELE}'")
+    )
+
+    #additional columend for each element reports on whether there is a plateay asscocaited with the element
+    #making a kinf of matris.
+    Elements.add_report_segment(
+       SegmentSQL("SELECT '{PNAME}' FROM relations WHERE source = '{Plateau_id}' and Target = '{Element}'",
+                   context = QueryContext(args,"SELECT id Plateau_id, name PNAME  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
+        )
+    )
+
+    # Tell the report engine that after elven folder, make the report about the elmements in that folder.
+    Folders.set_substanza (Elements)
+
+
+    Folders.report({})
+    return Folders
+
+```
 #### Subject Query
 A subject query defines an ordered list of subjects that are to be reported on. The Quaery yield parameters needed to identify a subject for each line in a report. The subjet Query is passed to a contructor of a StanzaFactory object in its constructor.
 
