@@ -10,9 +10,8 @@ can hten be used to achieve the following goals::
 
 *The tools is very much a work in progress, evolving weekly*
 
-#Installation
-
-##Software Installation stuff.
+Software Installation
+=====================
 
 The software is in an early state. Early users
 are managers using macs. Since 2.7 is shipped with
@@ -33,17 +32,17 @@ At the current level of development the archi_tool software is
 run from the directory holding the software.  Archi_tool software
 is distributed via git as follows:
 
-`
+```
 #Make an initial  archi_tool directory a filled with archi_tool stuff.
 $ git clone https://github.com/ncsa/archi_tools.git
-`
+```
 
-Update afro mthe current master.
+Update from the current git master branch. 
 
-`
+```
 #update an archi_tool directory with new stuff.
 $git pull origin master
-`
+```
 
 #Run-time Conventions
 
@@ -68,23 +67,23 @@ suported convention is to:
 1. After suitable invocations of archi_tool, An sqlite database is created in the current working directory, named. <prefix>archi_tool.db, for example DEMAND_archi_tool.db
 for the DEMAND_ prefix.
 
-`
+```
 $archi_tool -p <prefix> acquire  <archimate file>
-`
+```
 
 moves the exported .csv files and the .archimate file into the cache
 directory named by the prefix.  These files provide stable inputs for
 downstream tool chains.  If you update achimate, and want the updates
 to propagate to the databse, you mush re-acquire the relevant files.
 
-`
+```
 #example 
 $archi_tool -p DEMAND_ acquire  /usr/donaldp..../demand.archimate
 #cd archi_tool
 $ls cache/DEMAND_/
 DEMAND_elements.csv     DEMAND_properties.csv   DEMAND_relations.csv
 ingested.archimate
-`
+```
 
 All of this is not a good practice but is where the software is.
 
