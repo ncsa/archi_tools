@@ -219,16 +219,16 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(archi_interface.cachepath(args),"*.csv")
+    vault_files = os.path.join(archi_interface.cachepath(args),"*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
-        if "elements" in v :ingest_elements(args, v)
-        elif "relations" in v :ingest_relations(args, v)
-        elif "properties" in v :ingest_properties(args, v)
-        else:
-            shlog.error ("Cannot identify type of %s" % v)
-            exit(1)
+        ingest_elements(args, v)
+        ingest_relations(args, v)
+        ingest_properties(args, v)
+        # else:
+        #     shlog.error ("Cannot identify type of %s" % v)
+        #     exit(1)
             
     #make tables from other modules
     conventions.mkTables(args)  #modeling conventions
@@ -236,54 +236,39 @@ def ingest(args):
 def ingest_elements(args, csvfile):
         shlog.normal ("about to open %s",csvfile)
         con = sqlite3.connect(args.dbfile)
-        with open(csvfile) as fin:
-            dr = csv.reader(fin)
-            hdr = next(dr) # strip header
-    
-            # build row from csv and csv-constant information
-            rows =[]
-            for row in dr:
-                if not row : continue  #skip blanks
-                if len(row) == 1 : continue #pesky line at end --  BRITTLE
-                rows.append(row)
-            elementsTable.insert(con, rows)
-            ingestTable.insert(con, [[iso_now(),csvfile,'ELEMENTS']])
+        con_temp = sqlite3.connect(csvfile)
+        c_temp = con_temp.cursor()
+        c_temp.execute("SELECT id, type, name, documentation"
+                       " FROM elements")
+        rows = c_temp.fetchall()
+
+        elementsTable.insert(con, rows)
+        ingestTable.insert(con, [[iso_now(),'','ELEMENTS']])
+        con_temp.close()
                 
     
 def ingest_relations(args, csvfile):
     shlog.normal ("about to open %s",csvfile)
     con = sqlite3.connect(args.dbfile)
-
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        # build row from csv and csv-constant information
-        rows =[]
-        for row in dr:
-            if not row : continue  #skip blanks 
-            if len(row) == 1 : continue #pesky line at end --  BRITTLE
-            rows.append(row)
-        relationsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'RELATIONS']])
+    con_temp = sqlite3.connect(csvfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("SELECT id, null as Type, name, documentation, source_id as source, target_id as Target"
+                   " FROM relationships")
+    rows = c_temp.fetchall()
+    relationsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),'','RELATIONS']])
 
                  
 def ingest_properties(args, csvfile):
     shlog.normal ("about to open %s",csvfile)
     con = sqlite3.connect(args.dbfile)
-
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        # build row from csv and csv-constant information
-        rows =[]
-        for row in dr:
-            if not row : continue  #skip blanks 
-            if len(row) == 1 : continue #pesky line at end --  BRITTLE
-            rows.append(row)
-        propertiesTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'PROPERTIES']])
+    con_temp = sqlite3.connect(csvfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("SELECT parent_ID, name, value"
+                   " FROM properties")
+    rows = c_temp.fetchall()
+    propertiesTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),'','PROPERTIES']])
 
     
 ###################################################################

@@ -54,7 +54,7 @@ def cachepath(args):
        e.g for prefix DES_ make a cache/DES_ directory if needed
        and return that path to the caller.
     """
-    directory = os.path.join(VAULT_ROOT, args.prefix)
+    directory = os.path.join(VAULT_ROOT)
     try:
             os.stat(directory)
     except:
