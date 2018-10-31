@@ -219,7 +219,7 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(archi_interface.cachepath(args),"*.sqlite")
+    vault_files = os.path.join(archi_interface.cachepath(args),args.prefix + "*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
@@ -233,42 +233,42 @@ def ingest(args):
     #make tables from other modules
     conventions.mkTables(args)  #modeling conventions
         
-def ingest_elements(args, csvfile):
-        shlog.normal ("about to open %s",csvfile)
+def ingest_elements(args, sqldbfile):
+        shlog.normal ("about to open %s",sqldbfile)
         con = sqlite3.connect(args.dbfile)
-        con_temp = sqlite3.connect(csvfile)
+        con_temp = sqlite3.connect(sqldbfile)
         c_temp = con_temp.cursor()
         c_temp.execute("SELECT id, type, name, documentation"
                        " FROM elements")
         rows = c_temp.fetchall()
 
         elementsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),'','ELEMENTS']])
+        ingestTable.insert(con, [[iso_now(),sqldbfile,'ELEMENTS']])
         con_temp.close()
                 
     
-def ingest_relations(args, csvfile):
-    shlog.normal ("about to open %s",csvfile)
+def ingest_relations(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
-    con_temp = sqlite3.connect(csvfile)
+    con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
     c_temp.execute("SELECT id, null as Type, name, documentation, source_id as source, target_id as Target"
                    " FROM relationships")
     rows = c_temp.fetchall()
     relationsTable.insert(con, rows)
-    ingestTable.insert(con, [[iso_now(),'','RELATIONS']])
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'RELATIONS']])
 
                  
-def ingest_properties(args, csvfile):
-    shlog.normal ("about to open %s",csvfile)
+def ingest_properties(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
-    con_temp = sqlite3.connect(csvfile)
+    con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
     c_temp.execute("SELECT parent_ID, name, value"
                    " FROM properties")
     rows = c_temp.fetchall()
     propertiesTable.insert(con, rows)
-    ingestTable.insert(con, [[iso_now(),'','PROPERTIES']])
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'PROPERTIES']])
 
     
 ###################################################################
@@ -292,7 +292,7 @@ def dbinfo(args):
     # now ingest infor from CSV's
     sql = "Select * from INGESTS"
     for result in q(args, sql):
-        l.append(["csv",result])
+        l.append(["sqlite",result])
 
     print (tabulate.tabulate(l,["Item","Value"]))
 
@@ -347,9 +347,9 @@ def extend(args):
 
       Code UUID in ther prototype for elements for the cell to be ne a newly generated UUID
       """
-      csvfile = open(args.csv, 'ab') 
+      sqldbfile = open(args.csv, 'ab') 
       prototype = args.prototype.split(",")
-      writer = csv.writer(csvfile, delimiter=',',
+      writer = csv.writer(sqldbfile, delimiter=',',
             quotechar='"', quoting=csv.QUOTE_ALL)
       for lineno in range(args.nappends):
           line = []
@@ -374,9 +374,9 @@ def header(args):
       else:
             #relations
             hdr = '"ID","Type","Name","Documentation","Source","Target"'
-      csvfile = open(args.prefix + args.csvtype + ".csv", 'w')
-      csvfile.write(hdr + '\n')
-      csvfile.close()
+      sqldbfile = open(args.prefix + args.csvtype + ".csv", 'w')
+      sqldbfile.write(hdr + '\n')
+      sqldbfile.close()
 
 ###########################################################
 #
@@ -410,7 +410,7 @@ if __name__ == "__main__":
     #Subcommand  to ingest csv to sqlite3 db file 
     ingest_parser = subparsers.add_parser('ingest', description=ingest.__doc__)
     ingest_parser.set_defaults(func=ingest)
-    #ingest_parser.add_argument("csvfile")
+    #ingest_parser.add_argument("sqldbfile")
 
     list_parser = subparsers.add_parser('list', description=list.__doc__)
     list_parser.set_defaults(func=list)
@@ -430,16 +430,16 @@ if __name__ == "__main__":
     like_parser.add_argument("pattern", help="SQL pattern for matching")
 
     #Subcommand  to extend a archimate-style CSV export file 
-    extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
-    extend_parser.set_defaults(func=extend)
-    extend_parser.add_argument("csv", help="csvfile to append to")
-    extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
-    extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
+    # extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
+    # extend_parser.set_defaults(func=extend)
+    # extend_parser.add_argument("csv", help="csv to append to")
+    #extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
+    #extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
 
     #Subcommand  make an archmate style empty (header only) CSV file
-    header_parser = subparsers.add_parser('header', description=header.__doc__)
-    header_parser.set_defaults(func=header)
-    header_parser.add_argument("csvtype", help="type of csvfile to make")
+    # header_parser = subparsers.add_parser('header', description=header.__doc__)
+    # header_parser.set_defaults(func=header)
+    # header_parser.add_argument("csvtype", help="type of sqldbfile to make")
 
     archi_interface.parsers(subparsers)
     conventions.parsers(subparsers)
