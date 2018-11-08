@@ -258,6 +258,8 @@ if __name__ == "__main__":
     #Subcommand  to  make a report 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument("--show" , "-s", help="show result in excel", default=False, action='store_true')
+    report_parser.add_argument("--killexcel", "-ke", action='store_true',
+                             help="kill all instances of Excel upon execution")
     report_parser.add_argument("--function" , "-f", help="def: modulename",default=None)
     report_parser.add_argument("--excelfile" , "-e", help="def: modulename.xslx",default=None)
     report_parser.add_argument("module" , help="obtain report definition from this module")
@@ -285,6 +287,8 @@ if __name__ == "__main__":
         exit(2)
 
     rpt = module.__dict__[args.function](args)
+    import os
+    if args.killexcel: os.system('killall "Microsoft Excel"')
     rpt.workspace.excel()
     exit(0)
 

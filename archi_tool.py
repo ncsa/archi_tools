@@ -126,9 +126,9 @@ ingestedTable.check()
 #Record ID's that have been folder from CSV's to distinguich from those created.
 folderTable = SQLTable()
 folderTable.tableName = 'FOLDER'
-folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','WBS' ,'Location','Documentation', 'Enclave', 'Units']
-folderTable.hfm       =[     t,     t,     t,     t,     t,         t,            t,         t,      t ]
-folderTable.hdt       =['text','text','text','text','text',    'text',       'text',    'text', 'text' ]
+folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation']
+folderTable.hfm       =[     t,            t,     t,     t,              t]
+folderTable.hdt       =['text',       'text','text','text',         'text']
 folderTable.check()
 
 #Record ID's that have been folder_elements from CSV's to distinguich from those created.
@@ -227,6 +227,7 @@ def ingest(args):
         ingest_relations(args, v)
         ingest_properties(args, v)
         ingest_folders(args, v)
+        ingest_folder_elements(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -276,12 +277,22 @@ def ingest_folders(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("SELECT distinct f.id, fm.parent_folder_id as parent_id, null as Type, f.Name, null as WBS, null as Location, f.Documentation, null as Enclave, null as Units"
+    c_temp.execute("SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation"
                    " FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id")
     rows = c_temp.fetchall()
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
 
+def ingest_folder_elements(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("SELECT parent_folder_id as Folder, element_id as Element"
+                   " FROM elements_in_model")
+    rows = c_temp.fetchall()
+    folder_elementsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER_ELEMENTS']])
     
 ###################################################################
 #
