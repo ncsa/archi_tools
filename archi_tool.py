@@ -240,8 +240,12 @@ def ingest_elements(args, sqldbfile):
         con = sqlite3.connect(args.dbfile)
         con_temp = sqlite3.connect(sqldbfile)
         c_temp = con_temp.cursor()
-        c_temp.execute("SELECT id, type, name, documentation"
-                       " FROM elements")
+        c_temp.execute("""WITH recentelements(id, created_on) AS (SELECT id, max(created_on) as created_on FROM elements
+                          GROUP BY id)
+                          SELECT e.id, e.type, e.name, e.documentation
+                          FROM elements e
+                          INNER JOIN recentelements re on re.id=e.id AND re.created_on=e.created_on
+                          GROUP BY e.id, e.type, e.name, e.documentation""")
         rows = c_temp.fetchall()
 
         elementsTable.insert(con, rows)
@@ -307,8 +311,13 @@ def ingest_folder_elements(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("SELECT parent_folder_id as Folder, element_id as Element"
-                   " FROM elements_in_model")
+    c_temp.execute("""WITH recentEIM(id, model_version) AS (SELECT element_id as id, max(model_version) as model_version FROM elements_in_model
+                      GROUP BY element_id)
+                      SELECT eim.parent_folder_id as Folder, eim.element_id as Element
+                      FROM elements_in_model eim
+                      INNER JOIN recentEIM rEIM on rEIM.id=eim.element_id AND rEIM.model_version=eim.model_version
+                      GROUP BY Folder, Element
+                      """)
     rows = c_temp.fetchall()
     folder_elementsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER_ELEMENTS']])
