@@ -286,9 +286,10 @@ if __name__ == "__main__":
         shlog.error("%s is not a function within module %s" % (args.function, args.module))
         exit(2)
 
-    rpt = module.__dict__[args.function](args)
-    import os
-    if args.killexcel: os.system('killall "Microsoft Excel"')
+    rpt = module.__dict__[args.function](args) #1
+    rpt.report({})
+    import os #4
+    if args.killexcel: os.system('osascript excel_killer.scpt')
     rpt.workspace.excel()
     exit(0)
 

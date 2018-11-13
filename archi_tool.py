@@ -126,9 +126,9 @@ ingestedTable.check()
 #Record ID's that have been folder from CSV's to distinguich from those created.
 folderTable = SQLTable()
 folderTable.tableName = 'FOLDER'
-folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation']
-folderTable.hfm       =[     t,            t,     t,     t,              t]
-folderTable.hdt       =['text',       'text','text','text',         'text']
+folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation','Depth']
+folderTable.hfm       =[     t,            t,     t,     t,              t,      t]
+folderTable.hdt       =['text',       'text','text','text',         'text', 'text']
 folderTable.check()
 
 #Record ID's that have been folder_elements from CSV's to distinguich from those created.
@@ -277,8 +277,23 @@ def ingest_folders(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation"
-                   " FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id")
+    c_temp.execute("""WITH RECURSIVE allfolders(id, parent_id, type, Name, Documentation) AS (SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation
+                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id),
+                      depths(id, name, depth) AS (
+                      SELECT id, Name, type as depth
+                      FROM allfolders
+                      WHERE parent_id IS NULL
+                    
+                      UNION ALL
+                    
+                      SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| '.' || cast(allfolders.name as text) as depth
+                      FROM allfolders
+                      JOIN depths ON allfolders.parent_id = depths.id
+                      ) 
+                      SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
+                      FROM allfolders as af
+                              INNER JOIN depths as d on d.id=af.id
+                      """)
     rows = c_temp.fetchall()
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])

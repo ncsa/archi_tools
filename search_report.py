@@ -6,20 +6,11 @@ def search_report(args):
 
 
     Folders  = StanzaFactory(args,
-                             """WITH RECURSIVE depths(id, name, depth) AS (
-    SELECT id, Name, 0
-    FROM FOLDER
-    WHERE parent_id IS NULL
-    UNION ALL
-    SELECT FOLDER.id, FOLDER.Name, depths.depth + 1
-    FROM FOLDER
-    JOIN depths ON FOLDER.parent_id = depths.id
-)
-select d.ID as FID 
-from depths d
-Inner join PROPERTIES p on p.id = FID
-WHERE p.Key = '%s'
-order by depth asc""" % Search_term
+                             """select distinct d.ID as FID 
+                                from FOLDER d
+                                Inner join PROPERTIES p on p.id = FID
+                                WHERE p.Key = '%s'
+                                order by depth asc""" % Search_term
     )
     Folders.add_report_segment(
         SegmentSQL("SELECT id, 'Folder' as Kind, Name, Documentation from Folder where id = '{FID}'")
@@ -50,5 +41,5 @@ order by depth asc""" % Search_term
     # Folders.set_substanza (Elements)
 
 
-    Folders.report({})
+    # Folders.report({})
     return Folders
