@@ -277,8 +277,12 @@ def ingest_folders(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH RECURSIVE allfolders(id, parent_id, type, Name, Documentation) AS (SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation
-                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id),
+    c_temp.execute("""WITH RECURSIVE mostrecent(id, created) AS (SELECT f.id, max(created_on) as created
+                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id
+                      GROUP BY f.id),
+                      allfolders(id, parent_id, type, Name, Documentation) AS (SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation
+                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id
+					  INNER JOIN mostrecent mr on mr.id=f.id AND mr.created=f.created_on),
                       depths(id, name, depth) AS (
                       SELECT id, Name, type as depth
                       FROM allfolders

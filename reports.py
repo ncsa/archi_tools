@@ -8,6 +8,9 @@ import db
 
 #  do not worry yet about rows that are composite.
 
+#test bench
+key_collector = []
+
 def q(args, sql):
     con = sqlite3.connect(args.dbfile)
     cur = con.cursor()
@@ -258,7 +261,7 @@ if __name__ == "__main__":
     #Subcommand  to  make a report 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument("--show" , "-s", help="show result in excel", default=False, action='store_true')
-    report_parser.add_argument("--killexcel", "-ke", action='store_true',
+    report_parser.add_argument("--closeexcel", "-ce", action='store_true',
                              help="kill all instances of Excel upon execution")
     report_parser.add_argument("--function" , "-f", help="def: modulename",default=None)
     report_parser.add_argument("--excelfile" , "-e", help="def: modulename.xslx",default=None)
@@ -288,8 +291,9 @@ if __name__ == "__main__":
 
     rpt = module.__dict__[args.function](args) #1
     rpt.report({})
+    # print(rpt.args.function)
     import os #4
-    if args.killexcel: os.system('osascript excel_killer.scpt')
+    if args.closeexcel: os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
     rpt.workspace.excel()
     exit(0)
 
