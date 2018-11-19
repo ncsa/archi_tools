@@ -54,7 +54,7 @@ def cachepath(args):
        e.g for prefix DES_ make a cache/DES_ directory if needed
        and return that path to the caller.
     """
-    directory = os.path.join(VAULT_ROOT, args.prefix)
+    directory = os.path.join(VAULT_ROOT)
     try:
             os.stat(directory)
     except:
@@ -93,7 +93,7 @@ def acquire_archimate(args):
 def debug(args):
       """run archi with the logger console visible"""
       import subprocess
-      subprocess.call("/Applications/Archi.app/Contents/MacOS/Archi -console", shell=True,
+      subprocess.call("open -a Archi --args -console", shell=True,
                       stdout=sys.stdout, stdin=sys.stdin, stderr=sys.stderr)
 
 def forget(args):
@@ -167,10 +167,10 @@ def parsers(subparsers):
 
     
     #Acquire files from the working area to the cache
-    acquire_parser = subparsers.add_parser('acquire', description=acquire.__doc__)
-    acquire_parser.set_defaults(func=acquire)
-    acquire_parser.add_argument("archifile",
-              help="path to .archimate file corresponding csv's")
+    # acquire_parser = subparsers.add_parser('acquire', description=acquire.__doc__)
+    # acquire_parser.set_defaults(func=acquire)
+    # acquire_parser.add_argument("archifile",
+    #           help="path to .archimate file corresponding csv's")
 
     #Forget all Archimate modles, allow for a clean start of archiante
     forget_parser = subparsers.add_parser('forget', description=forget.__doc__)

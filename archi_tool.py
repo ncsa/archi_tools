@@ -126,9 +126,9 @@ ingestedTable.check()
 #Record ID's that have been folder from CSV's to distinguich from those created.
 folderTable = SQLTable()
 folderTable.tableName = 'FOLDER'
-folderTable.columns   =['Id'  ,'Type','Name','WBS' ,'Location','Documentation', 'Enclave', 'Units']
-folderTable.hfm       =[     t,     t,     t,     t,         t,            t,         t,      t ]
-folderTable.hdt       =['text','text','text','text',    'text',       'text',    'text', 'text' ]
+folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation','Depth']
+folderTable.hfm       =[     t,            t,     t,     t,              t,      t]
+folderTable.hdt       =['text',       'text','text','text',         'text', 'text']
 folderTable.check()
 
 #Record ID's that have been folder_elements from CSV's to distinguich from those created.
@@ -219,72 +219,118 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(archi_interface.cachepath(args),"*.csv")
+    vault_files = os.path.join(archi_interface.cachepath(args), "*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
-        if "elements" in v :ingest_elements(args, v)
-        elif "relations" in v :ingest_relations(args, v)
-        elif "properties" in v :ingest_properties(args, v)
-        else:
-            shlog.error ("Cannot identify type of %s" % v)
-            exit(1)
+        ingest_elements(args, v)
+        ingest_relations(args, v)
+        ingest_properties(args, v)
+        ingest_folders(args, v)
+        ingest_folder_elements(args, v)
+        # else:
+        #     shlog.error ("Cannot identify type of %s" % v)
+        #     exit(1)
             
     #make tables from other modules
     conventions.mkTables(args)  #modeling conventions
         
-def ingest_elements(args, csvfile):
-        shlog.normal ("about to open %s",csvfile)
+def ingest_elements(args, sqldbfile):
+        shlog.normal ("about to open %s",sqldbfile)
         con = sqlite3.connect(args.dbfile)
-        with open(csvfile) as fin:
-            dr = csv.reader(fin)
-            hdr = next(dr) # strip header
-    
-            # build row from csv and csv-constant information
-            rows =[]
-            for row in dr:
-                if not row : continue  #skip blanks
-                if len(row) == 1 : continue #pesky line at end --  BRITTLE
-                rows.append(row)
-            elementsTable.insert(con, rows)
-            ingestTable.insert(con, [[iso_now(),csvfile,'ELEMENTS']])
+        con_temp = sqlite3.connect(sqldbfile)
+        c_temp = con_temp.cursor()
+        c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+                          desired_model_elements(element_id, element_version) AS (SELECT element_id, element_version
+                          FROM elements_in_model eim
+                          INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
+                          SELECT e.id, e.type, e.name, e.documentation
+                          FROM elements e
+                          INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
+                          """ % args.prefix)
+        rows = c_temp.fetchall()
+
+        elementsTable.insert(con, rows)
+        ingestTable.insert(con, [[iso_now(),sqldbfile,'ELEMENTS']])
+        con_temp.close()
                 
     
-def ingest_relations(args, csvfile):
-    shlog.normal ("about to open %s",csvfile)
+def ingest_relations(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
-
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        # build row from csv and csv-constant information
-        rows =[]
-        for row in dr:
-            if not row : continue  #skip blanks 
-            if len(row) == 1 : continue #pesky line at end --  BRITTLE
-            rows.append(row)
-        relationsTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'RELATIONS']])
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+                      desired_model_relations(relationship_id, relationship_version) AS (SELECT relationship_id, relationship_version
+                      FROM relationships_in_model rim
+                      INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
+                      SELECT r.id, null as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
+                      FROM relationships r
+                      INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
+                      """ % args.prefix)
+    rows = c_temp.fetchall()
+    relationsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'RELATIONS']])
 
                  
-def ingest_properties(args, csvfile):
-    shlog.normal ("about to open %s",csvfile)
+def ingest_properties(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("""WITH properties_prep(parent_ID, name, value, max_parent_verion) as (SELECT parent_ID, name, value, max(parent_version) as max_parent_verion
+                      FROM properties
+                      GROUP BY parent_ID, name, value)
+                      SELECT parent_ID, name, value
+                      FROM properties_prep
+                      """)
+    rows = c_temp.fetchall()
+    propertiesTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'PROPERTIES']])
 
-    with open(csvfile) as fin:
-        dr = csv.reader(fin)
-        hdr = next(dr) # strip header
-        
-        # build row from csv and csv-constant information
-        rows =[]
-        for row in dr:
-            if not row : continue  #skip blanks 
-            if len(row) == 1 : continue #pesky line at end --  BRITTLE
-            rows.append(row)
-        propertiesTable.insert(con, rows)
-        ingestTable.insert(con, [[iso_now(),csvfile,'PROPERTIES']])
+def ingest_folders(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
 
+                      allfolders(id, parent_id, type, Name, Documentation) AS (SELECT folder_id as id, parent_folder_id as parent_id, type, Name, Documentation
+                      FROM folders_in_model fim
+                      INNER JOIN desired_model dm on dm.version=fim.model_version AND dm.id=fim.model_id
+					  INNER JOIN folders f on f.id=fim.folder_id AND f.version=fim.folder_version),
+					  
+                      depths(id, name, depth) AS (
+                      SELECT id, Name, type as depth
+                      FROM allfolders
+                      WHERE parent_id IS NULL
+                    
+                      UNION ALL
+                    
+                      SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| '.' || cast(allfolders.name as text) as depth
+                      FROM allfolders
+                      JOIN depths ON allfolders.parent_id = depths.id
+                      ) 
+                      SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
+                      FROM allfolders as af
+                              INNER JOIN depths as d on d.id=af.id
+                      """ % args.prefix)
+    rows = c_temp.fetchall()
+    folderTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
+
+def ingest_folder_elements(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id)
+                      SELECT parent_folder_id, element_id
+                      FROM elements_in_model eim
+                      INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id""")
+    rows = c_temp.fetchall()
+    folder_elementsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER_ELEMENTS']])
     
 ###################################################################
 #
@@ -307,7 +353,7 @@ def dbinfo(args):
     # now ingest infor from CSV's
     sql = "Select * from INGESTS"
     for result in q(args, sql):
-        l.append(["csv",result])
+        l.append(["sqlite",result])
 
     print (tabulate.tabulate(l,["Item","Value"]))
 
@@ -362,9 +408,9 @@ def extend(args):
 
       Code UUID in ther prototype for elements for the cell to be ne a newly generated UUID
       """
-      csvfile = open(args.csv, 'ab') 
+      sqldbfile = open(args.csv, 'ab') 
       prototype = args.prototype.split(",")
-      writer = csv.writer(csvfile, delimiter=',',
+      writer = csv.writer(sqldbfile, delimiter=',',
             quotechar='"', quoting=csv.QUOTE_ALL)
       for lineno in range(args.nappends):
           line = []
@@ -389,9 +435,9 @@ def header(args):
       else:
             #relations
             hdr = '"ID","Type","Name","Documentation","Source","Target"'
-      csvfile = open(args.prefix + args.csvtype + ".csv", 'w')
-      csvfile.write(hdr + '\n')
-      csvfile.close()
+      sqldbfile = open(args.prefix + args.csvtype + ".csv", 'w')
+      sqldbfile.write(hdr + '\n')
+      sqldbfile.close()
 
 ###########################################################
 #
@@ -425,7 +471,7 @@ if __name__ == "__main__":
     #Subcommand  to ingest csv to sqlite3 db file 
     ingest_parser = subparsers.add_parser('ingest', description=ingest.__doc__)
     ingest_parser.set_defaults(func=ingest)
-    #ingest_parser.add_argument("csvfile")
+    #ingest_parser.add_argument("sqldbfile")
 
     list_parser = subparsers.add_parser('list', description=list.__doc__)
     list_parser.set_defaults(func=list)
@@ -445,16 +491,16 @@ if __name__ == "__main__":
     like_parser.add_argument("pattern", help="SQL pattern for matching")
 
     #Subcommand  to extend a archimate-style CSV export file 
-    extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
-    extend_parser.set_defaults(func=extend)
-    extend_parser.add_argument("csv", help="csvfile to append to")
-    extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
-    extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
+    # extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
+    # extend_parser.set_defaults(func=extend)
+    # extend_parser.add_argument("csv", help="csv to append to")
+    #extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
+    #extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
 
     #Subcommand  make an archmate style empty (header only) CSV file
-    header_parser = subparsers.add_parser('header', description=header.__doc__)
-    header_parser.set_defaults(func=header)
-    header_parser.add_argument("csvtype", help="type of csvfile to make")
+    # header_parser = subparsers.add_parser('header', description=header.__doc__)
+    # header_parser.set_defaults(func=header)
+    # header_parser.add_argument("csvtype", help="type of sqldbfile to make")
 
     archi_interface.parsers(subparsers)
     conventions.parsers(subparsers)
@@ -463,7 +509,7 @@ if __name__ == "__main__":
 
     # tag the dbfile with the prefix so that we can work on
     # various models without collision
-    args.dbfile = args.prefix+args.dbfile
+    args.dbfile = args.prefix+ '_' +args.dbfile
     
     # translate text argument to log level.
     # least to most verbose FATAL WARN INFO DEBUG

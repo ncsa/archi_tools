@@ -5,10 +5,16 @@ def plateau_report(args):
 
 
     Folders  = StanzaFactory(args,
-                             "SELECT Id FID from folder"
+                             "SELECT distinct Id as FID from folder order by depth asc limit 10"
     )
     Folders.add_report_segment(
-        SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '{FID}'")
+        SegmentSQL("SELECT id, 'Folder' as Kind, Name, Documentation from Folder where id = '{FID}'")
+    )
+    Folders.add_report_segment(
+        SegmentSQL("SELECT case Value when '' then 'yes' else value end from PROPERTIES where id = '{FID}' AND key='{Key}'",
+                   context=QueryContext(args,
+                                        "select distinct Key from PROPERTIES order by key desc")
+                   )
     )
 
 
@@ -16,17 +22,19 @@ def plateau_report(args):
                              "SELECT Element from Folder_elements  where folder= '{FID}'"
     )
     Elements.add_report_segment(
-        SegmentSQL("SELECT * from Elements Where id = '{Element}'")
+        SegmentSQL("SELECT id, 'Element' as Kind, Name, Documentation from Elements Where id = '{Element}'")
     )
-    
+
     Elements.add_report_segment(
-       SegmentSQL("SELECT '{PNAME}' FROM relations WHERE source = '{Plateau_id}' and Target = '{Element}'",
-                   context = QueryContext(args,"SELECT id Plateau_id, name PNAME  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
-        )
+        SegmentSQL(
+            "SELECT case Value when '' then 'yes' else value end from PROPERTIES where id = '{Element}' AND key='{Key}'",
+            context=QueryContext(args,
+                                 "select distinct Key from PROPERTIES order by key desc")
+            )
     )
 
     Folders.set_substanza (Elements)
 
 
-    Folders.report({})
-    return Folders
+    # Folders.report({}) #2
+    return Folders #3

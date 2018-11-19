@@ -8,6 +8,8 @@ import db
 
 #  do not worry yet about rows that are composite.
 
+
+
 def q(args, sql):
     con = sqlite3.connect(args.dbfile)
     cur = con.cursor()
@@ -26,16 +28,21 @@ def qtranspose(args, sql):
         results.append(result)
     return zip(*results)
 
-def qd(args, sql):
+def qd(args, sql, passed_stanza):
     #return results of query as a list of dictionaries,
-    #one for each row. 
-    
+    #one for each row.
     con = sqlite3.connect(args.dbfile)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     shlog.verbose(sql)
     results = cur.execute (sql)
     shlog.debug(results)
+    # header colelction handling
+    # 0th call to qd() is from contexts
+    # the one that follows it directly is the one we can snatch column names from
+    if passed_stanza.left_column_collections == 1:
+        passed_stanza.left_columns_collector = list(map(lambda x: x[0], cur.description))
+        passed_stanza.left_column_collections += 1
     return results
 
 class Workspace:
@@ -49,6 +56,8 @@ class Workspace:
         #self.content = collections.defaultdict(lambda x : "Empty")
         self.content={}
         self.args=args
+        # header value that will be passed by stanza for integration into excel object
+        self.header = []
     def next_row(self):
         self.row = self.row+1
         #self.content[self.row] = collections.defaultdict(lambda x : "Empty")
@@ -61,6 +70,17 @@ class Workspace:
             if rowno in self.content.keys() and colno in self.content[rowno].keys():
                 #use python string as a proxy for numeric columns.
                 max_chars = max(max_chars,len("%s" % self.content[rowno][colno]))
+            # special header handling
+            # if rowno is 0, that means we are looking at the header row
+            # due to the way content vs header are implemented, self.header is offset by 1 compared to colno
+            # for example, B2 value (colno 1 rowno 0) is locaed in self.header[0]. hence, colno-1 si implemented
+            if rowno == 0 and colno > 0:
+                try:
+                    max_chars = max(max_chars, len("%s" % self.header[colno-1]))
+                except:
+                    # if an exception is thrown, it's most likely the IndexError: list index out of range
+                    # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
+                    pass
         shlog.debug("XXX %s %s" %  (colno, max_chars*2)) 
         return max_chars
     def add_element(self, content_element):
@@ -87,6 +107,10 @@ class Workspace:
         worksheet = workbook.add_worksheet()
         #have to say bold to work to make wrap to work, hmm
         x = workbook.add_format({"text_wrap" : True,  "bold" : True })
+        # write header
+        for h in range(0, len(self.header)):
+            worksheet.write(0, h+1, self.header[h], x)
+        # write collected content
         for r in range(1,self.row+1):
             shlog.debug("content:%s", self.content)
             shlog.debug("writing excel row: %s" % r)
@@ -174,6 +198,12 @@ class StanzaFactory:
         # e.g self.substanza.report(element_id)
         self.workspace = Workspace(self.args)
         self.substanza = None
+        # context header names will be collected into context_collector
+        self.context_collector = []
+        # non-dynamic column names will be harvested from the second operation in qd
+        self.left_columns_collector = []
+        self.left_column_collections = 0
+
 
     def add_report_segment(self, segment_sql):
         self.report_segments.append(segment_sql)
@@ -183,17 +213,20 @@ class StanzaFactory:
         
     def report(self, element_sql_params):
         #Outer loop -- this query givee query paremater to ideniify the subject of a row
-        for row_query_sql_params in qd(self.args, self.element_sql.format(**element_sql_params)) :
+        # pass arguments, sql and the stanza itself so the header can be passed on
+        for row_query_sql_params in qd(self.args, self.element_sql.format(**element_sql_params), self) :
             self.workspace.next_row()
             for segment in self.report_segments:
                 unformatted_row_query_sql = segment.segment_sql
                 contexts = segment.context.context_list
                 for context in contexts:
-
                     #import pdb; pdb.set_trace()
                     merged_dict = {}
                     merged_dict.update(row_query_sql_params)
                     merged_dict.update(context)
+                    # header collection: collect the context to be used as a header
+                    if context.values() not in self.context_collector:
+                        self.context_collector.append(context.values())
                     shlog.debug("formating: %s:%s" %(unformatted_row_query_sql, merged_dict.keys()))
                     row_query_sql = unformatted_row_query_sql.format(**merged_dict)
                     shlog.debug(row_query_sql)
@@ -209,9 +242,13 @@ class StanzaFactory:
         return self.workspace
     
     def generate_one_to_one_segment(self,segment_sql):
+        # left_column_collections adds one one every pass. qd() will snatch the columns from sql on the second calling
+        # from generate_one_to_one_segment
+        self.left_column_collections += 1
         #perform query and then populate successive cells in the
         #workspace row with the result
-        segment_result = qd(self.args, segment_sql).fetchone()
+        # pass arguments, sql command and the stanza itself so we can retrieve static column names
+        segment_result = qd(self.args, segment_sql, self).fetchone()
         if segment_result:
             for s in segment_result:
                 self.workspace.add_element(s)
@@ -258,6 +295,8 @@ if __name__ == "__main__":
     #Subcommand  to  make a report 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument("--show" , "-s", help="show result in excel", default=False, action='store_true')
+    report_parser.add_argument("--closeexcel", "-ce", action='store_true',
+                             help="kill all instances of Excel upon execution")
     report_parser.add_argument("--function" , "-f", help="def: modulename",default=None)
     report_parser.add_argument("--excelfile" , "-e", help="def: modulename.xslx",default=None)
     report_parser.add_argument("module" , help="obtain report definition from this module")
@@ -283,8 +322,16 @@ if __name__ == "__main__":
     if args.function not in module.__dict__.keys():
         shlog.error("%s is not a function within module %s" % (args.function, args.module))
         exit(2)
-
-    rpt = module.__dict__[args.function](args)
+    rpt = module.__dict__[args.function](args) #1
+    rpt.report({})
+    # print(rpt.args.function)
+    import os #4
+    if args.closeexcel: os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
+    # compile header row names into rpt.context_collector
+    rpt.context_collector.remove([])
+    for i in rpt.context_collector:
+        rpt.left_columns_collector.append(i[0])
+    rpt.workspace.header = rpt.left_columns_collector
     rpt.workspace.excel()
     exit(0)
 
