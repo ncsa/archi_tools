@@ -219,7 +219,7 @@ def mkdb (args):
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
-    vault_files = os.path.join(archi_interface.cachepath(args),args.prefix + "*.sqlite")
+    vault_files = os.path.join(archi_interface.cachepath(args), "*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
         shlog.normal ("processing %s" % v)
@@ -240,12 +240,14 @@ def ingest_elements(args, sqldbfile):
         con = sqlite3.connect(args.dbfile)
         con_temp = sqlite3.connect(sqldbfile)
         c_temp = con_temp.cursor()
-        c_temp.execute("""WITH recentelements(id, created_on) AS (SELECT id, max(created_on) as created_on FROM elements
-                          GROUP BY id)
+        c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+                          desired_model_elements(element_id, element_version) AS (SELECT element_id, element_version
+                          FROM elements_in_model eim
+                          INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
                           SELECT e.id, e.type, e.name, e.documentation
                           FROM elements e
-                          INNER JOIN recentelements re on re.id=e.id AND re.created_on=e.created_on
-                          GROUP BY e.id, e.type, e.name, e.documentation""")
+                          INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
+                          """ % args.prefix)
         rows = c_temp.fetchall()
 
         elementsTable.insert(con, rows)
@@ -258,8 +260,14 @@ def ingest_relations(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("SELECT id, null as Type, name, documentation, source_id as source, target_id as Target"
-                   " FROM relationships")
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+                      desired_model_relations(relationship_id, relationship_version) AS (SELECT relationship_id, relationship_version
+                      FROM relationships_in_model rim
+                      INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
+                      SELECT r.id, null as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
+                      FROM relationships r
+                      INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
+                      """ % args.prefix)
     rows = c_temp.fetchall()
     relationsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'RELATIONS']])
@@ -270,8 +278,12 @@ def ingest_properties(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("SELECT parent_ID, name, value"
-                   " FROM properties")
+    c_temp.execute("""WITH properties_prep(parent_ID, name, value, max_parent_verion) as (SELECT parent_ID, name, value, max(parent_version) as max_parent_verion
+                      FROM properties
+                      GROUP BY parent_ID, name, value)
+                      SELECT parent_ID, name, value
+                      FROM properties_prep
+                      """)
     rows = c_temp.fetchall()
     propertiesTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'PROPERTIES']])
@@ -281,12 +293,13 @@ def ingest_folders(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH RECURSIVE mostrecent(id, created) AS (SELECT f.id, max(created_on) as created
-                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id
-                      GROUP BY f.id),
-                      allfolders(id, parent_id, type, Name, Documentation) AS (SELECT distinct f.id, fm.parent_folder_id as parent_id, f.type, f.Name, f.Documentation
-                      FROM folders f LEFT JOIN folders_in_model fm on fm.folder_id = f.id
-					  INNER JOIN mostrecent mr on mr.id=f.id AND mr.created=f.created_on),
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+
+                      allfolders(id, parent_id, type, Name, Documentation) AS (SELECT folder_id as id, parent_folder_id as parent_id, type, Name, Documentation
+                      FROM folders_in_model fim
+                      INNER JOIN desired_model dm on dm.version=fim.model_version AND dm.id=fim.model_id
+					  INNER JOIN folders f on f.id=fim.folder_id AND f.version=fim.folder_version),
+					  
                       depths(id, name, depth) AS (
                       SELECT id, Name, type as depth
                       FROM allfolders
@@ -301,7 +314,7 @@ def ingest_folders(args, sqldbfile):
                       SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
                       FROM allfolders as af
                               INNER JOIN depths as d on d.id=af.id
-                      """)
+                      """ % args.prefix)
     rows = c_temp.fetchall()
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
@@ -311,13 +324,10 @@ def ingest_folder_elements(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH recentEIM(id, model_version) AS (SELECT element_id as id, max(model_version) as model_version FROM elements_in_model
-                      GROUP BY element_id)
-                      SELECT eim.parent_folder_id as Folder, eim.element_id as Element
+    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id)
+                      SELECT parent_folder_id, element_id
                       FROM elements_in_model eim
-                      INNER JOIN recentEIM rEIM on rEIM.id=eim.element_id AND rEIM.model_version=eim.model_version
-                      GROUP BY Folder, Element
-                      """)
+                      INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id""")
     rows = c_temp.fetchall()
     folder_elementsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER_ELEMENTS']])
@@ -499,7 +509,7 @@ if __name__ == "__main__":
 
     # tag the dbfile with the prefix so that we can work on
     # various models without collision
-    args.dbfile = args.prefix+args.dbfile
+    args.dbfile = args.prefix+ '_' +args.dbfile
     
     # translate text argument to log level.
     # least to most verbose FATAL WARN INFO DEBUG
