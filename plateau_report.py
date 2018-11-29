@@ -19,7 +19,7 @@ def plateau_report(args):
 
 
     Elements = StanzaFactory(args,
-                             "SELECT Element from Folder_elements  where folder= '{FID}'"
+                             "SELECT id as Element from Elements  where ParentFolder= '{FID}'"
     )
     Elements.add_report_segment(
         SegmentSQL("SELECT id, 'Element' as Kind, Name, Documentation from Elements Where id = '{Element}'")

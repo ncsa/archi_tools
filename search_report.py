@@ -22,23 +22,23 @@ def search_report(args):
                    )
     )
 
-    #
-    # Elements = StanzaFactory(args,
-    #                          "SELECT Element from Folder_elements  where folder= '{FID}'"
-    # )
-    # Elements.add_report_segment(
-    #     SegmentSQL("SELECT id, 'Element' as Kind, Name, Documentation from Elements Where id = '{Element}'")
-    # )
-    #
-    # Elements.add_report_segment(
-    #     SegmentSQL(
-    #         "SELECT case Value when '' then 'yes' else value end from PROPERTIES where id = '{Element}' AND key='{Key}'",
-    #         context=QueryContext(args,
-    #                              "select distinct Key from PROPERTIES order by key desc")
-    #         )
-    # )
-    #
-    # Folders.set_substanza (Elements)
+
+    Elements = StanzaFactory(args,
+                             "SELECT id as Element from Elements  where ParentFolder= '{FID}'"
+    )
+    Elements.add_report_segment(
+        SegmentSQL("SELECT id, 'Element' as Kind, Name, Documentation from Elements Where id = '{Element}'")
+    )
+
+    Elements.add_report_segment(
+        SegmentSQL(
+            "SELECT case Value when '' then 'yes' else value end from PROPERTIES where id = '{Element}' AND key='{Key}'",
+            context=QueryContext(args,
+                                 "select distinct Key from PROPERTIES order by key desc")
+            )
+    )
+
+    Folders.set_substanza (Elements)
 
 
     # Folders.report({})

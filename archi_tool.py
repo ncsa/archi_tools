@@ -86,9 +86,9 @@ class SQLTable:
 # record model ELEMENTS 
 elementsTable = SQLTable()
 elementsTable.tableName = "ELEMENTS"
-elementsTable.columns = ['ID'  ,'Type','Name','Documentation']
-elementsTable.hfm =     [     t,    t,      t,             t ]
-elementsTable.hdt =     ['text','text','text',        'text' ]
+elementsTable.columns = ['ID'  ,'Type','Name','Documentation','ParentFolder']
+elementsTable.hfm =     [     t,    t,      t,             t,              t]
+elementsTable.hdt =     ['text','text','text',        'text',         'text']
 elementsTable.check()
 
 # record model relations 
@@ -130,14 +130,6 @@ folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation','Dept
 folderTable.hfm       =[     t,            t,     t,     t,              t,      t]
 folderTable.hdt       =['text',       'text','text','text',         'text', 'text']
 folderTable.check()
-
-#Record ID's that have been folder_elements from CSV's to distinguich from those created.
-folder_elementsTable = SQLTable()
-folder_elementsTable.tableName = 'FOLDER_ELEMENTS'
-folder_elementsTable.columns   =['Folder','Element']
-folder_elementsTable.hfm       =[       t,        t]
-folder_elementsTable.hdt       =['  text',   'text']
-folder_elementsTable.check()
 
 #Record ID's that have been dual from CSV's to distinguich from those created.
 dualTable = SQLTable()
@@ -212,7 +204,6 @@ def mkdb (args):
     ingestTable.mkTable(con)
     ingestedTable.mkTable(con)
     folderTable.mkTable(con)
-    folder_elementsTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
     return
@@ -227,7 +218,6 @@ def ingest(args):
         ingest_relations(args, v)
         ingest_properties(args, v)
         ingest_folders(args, v)
-        ingest_folder_elements(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -240,14 +230,22 @@ def ingest_elements(args, sqldbfile):
         con = sqlite3.connect(args.dbfile)
         con_temp = sqlite3.connect(sqldbfile)
         c_temp = con_temp.cursor()
-        c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
-                          desired_model_elements(element_id, element_version) AS (SELECT element_id, element_version
-                          FROM elements_in_model eim
-                          INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
-                          SELECT e.id, e.type, e.name, e.documentation
-                          FROM elements e
-                          INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
-                          """ % args.prefix)
+        # the ingest_elements query retrieves relevant elements from the archidump database
+        sql = """/*Retrieve id and the most recent version of a model matched by name*/
+                 /*desired_model should return one single row*/
+                 WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+                 /*Model stores all elements that ever existed in all the models, regardless of they exist in the recent versions*/
+				 /*That's why we retrieve elements that match the model id+model version from desired_model*/
+				 desired_model_elements(element_id, element_version, parent_folder_id) AS (SELECT element_id, element_version, parent_folder_id
+                 FROM elements_in_model eim
+                 INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
+                 /*With the correct element ids+versions identified, we can retrieve the matches from the elements table that has all the properties*/
+				 SELECT e.id, e.type, e.name, e.documentation, dme.parent_folder_id as ParentFolder
+                 FROM elements e
+                 INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
+                 """ % args.prefix
+        shlog.verbose(sql)
+        c_temp.execute(sql)
         rows = c_temp.fetchall()
 
         elementsTable.insert(con, rows)
@@ -260,14 +258,22 @@ def ingest_relations(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
-                      desired_model_relations(relationship_id, relationship_version) AS (SELECT relationship_id, relationship_version
-                      FROM relationships_in_model rim
-                      INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
-                      SELECT r.id, null as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
-                      FROM relationships r
-                      INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
-                      """ % args.prefix)
+    # the ingest_relations query retrieves relevant relations from the archidump database
+    sql = """/*Retrieve id and the most recent version of a model matched by name*/
+             /*desired_model should return one single row*/
+             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+             /*Model stores all relations that ever existed in all the models, regardless of they exist in the recent versions*/
+			 /*That's why we retrieve relations that match the model id+model version from desired_model*/
+             desired_model_relations(relationship_id, relationship_version) AS (SELECT relationship_id, relationship_version
+             FROM relationships_in_model rim
+             INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
+             /*With the correct relations ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
+             SELECT r.id, null as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
+             FROM relationships r
+             INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
+             """ % args.prefix
+    shlog.verbose(sql)
+    c_temp.execute(sql)
     rows = c_temp.fetchall()
     relationsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'RELATIONS']])
@@ -278,12 +284,17 @@ def ingest_properties(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH properties_prep(parent_ID, name, value, max_parent_verion) as (SELECT parent_ID, name, value, max(parent_version) as max_parent_verion
-                      FROM properties
-                      GROUP BY parent_ID, name, value)
-                      SELECT parent_ID, name, value
-                      FROM properties_prep
-                      """)
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """/*Retrieve the most recent versions of all properties*/
+             /*Properties for elements and folder that no longer exist will not be retrieved in report queries as long as INNER JOIN is used*/
+             WITH properties_prep(parent_ID, name, value, max_parent_verion) as (SELECT parent_ID, name, value, max(parent_version) as max_parent_verion
+             FROM properties
+             GROUP BY parent_ID, name, value)
+             SELECT parent_ID, name, value
+             FROM properties_prep
+             """
+    shlog.verbose(sql)
+    c_temp.execute(sql)
     rows = c_temp.fetchall()
     propertiesTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'PROPERTIES']])
@@ -293,44 +304,42 @@ def ingest_folders(args, sqldbfile):
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
-    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
-
-                      allfolders(id, parent_id, type, Name, Documentation) AS (SELECT folder_id as id, parent_folder_id as parent_id, type, Name, Documentation
-                      FROM folders_in_model fim
-                      INNER JOIN desired_model dm on dm.version=fim.model_version AND dm.id=fim.model_id
-					  INNER JOIN folders f on f.id=fim.folder_id AND f.version=fim.folder_version),
-					  
-                      depths(id, name, depth) AS (
-                      SELECT id, Name, type as depth
-                      FROM allfolders
-                      WHERE parent_id IS NULL
+    # the ingest_folders query retrieves relevant folders from the archidump database
+    sql = """/*Retrieve id and the most recent version of a model matched by name*/
+             /*desired_model should return one single row*/
+             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+             
+             /*Model stores all folders that ever existed in all the models, regardless of they exist in the recent versions*/
+			 /*That's why we folders elements that match the model id+model version from desired_model*/
+			 /*In addition, a folder CTE is needed for looped joins*/
+             allfolders(id, parent_id, type, Name, Documentation) AS (SELECT folder_id as id, parent_folder_id as parent_id, type, Name, Documentation
+             FROM folders_in_model fim
+             INNER JOIN desired_model dm on dm.version=fim.model_version AND dm.id=fim.model_id
+			 INNER JOIN folders f on f.id=fim.folder_id AND f.version=fim.folder_version),
+			 
+             /*Assign depth levels in a recursive CTE*/
+             depths(id, name, depth) AS (
+             SELECT id, Name, type as depth
+             FROM allfolders
+             WHERE parent_id IS NULL
+             
+             UNION ALL
                     
-                      UNION ALL
-                    
-                      SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| '.' || cast(allfolders.name as text) as depth
-                      FROM allfolders
-                      JOIN depths ON allfolders.parent_id = depths.id
-                      ) 
-                      SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
-                      FROM allfolders as af
-                              INNER JOIN depths as d on d.id=af.id
-                      """ % args.prefix)
+             SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| '.' || cast(allfolders.name as text) as depth
+             FROM allfolders
+             JOIN depths ON allfolders.parent_id = depths.id
+             ) 
+             /*Return contents of the recursive CTE*/
+             SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
+             FROM allfolders as af
+             INNER JOIN depths as d on d.id=af.id
+             """ % args.prefix
+    shlog.verbose(sql)
+    c_temp.execute(sql)
     rows = c_temp.fetchall()
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
 
-def ingest_folder_elements(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
-    con = sqlite3.connect(args.dbfile)
-    con_temp = sqlite3.connect(sqldbfile)
-    c_temp = con_temp.cursor()
-    c_temp.execute("""WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id)
-                      SELECT parent_folder_id, element_id
-                      FROM elements_in_model eim
-                      INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id""")
-    rows = c_temp.fetchall()
-    folder_elementsTable.insert(con, rows)
-    ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER_ELEMENTS']])
     
 ###################################################################
 #

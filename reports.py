@@ -42,6 +42,7 @@ def qd(args, sql, passed_stanza):
     # the one that follows it directly is the one we can snatch column names from
     if passed_stanza.left_column_collections == 1:
         passed_stanza.left_columns_collector = list(map(lambda x: x[0], cur.description))
+        shlog.verbose("Logged left columns to the second stanza (%s) passed: %s" % (passed_stanza,passed_stanza.left_columns_collector))
         passed_stanza.left_column_collections += 1
     return results
 
@@ -226,6 +227,7 @@ class StanzaFactory:
                     merged_dict.update(context)
                     # header collection: collect the context to be used as a header
                     if context.values() not in self.context_collector:
+                        shlog.verbose("Collecting dynamic (right) header value: %s" % context.values())
                         self.context_collector.append(context.values())
                     shlog.debug("formating: %s:%s" %(unformatted_row_query_sql, merged_dict.keys()))
                     row_query_sql = unformatted_row_query_sql.format(**merged_dict)
@@ -323,10 +325,13 @@ if __name__ == "__main__":
         shlog.error("%s is not a function within module %s" % (args.function, args.module))
         exit(2)
     rpt = module.__dict__[args.function](args) #1
+    shlog.verbose('Executing passed report: %s' % rpt.args.function)
     rpt.report({})
     # print(rpt.args.function)
     import os #4
-    if args.closeexcel: os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
+    if args.closeexcel:
+        shlog.normal("Terminating Excel")
+        os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
     # compile header row names into rpt.context_collector
     rpt.context_collector.remove([])
     for i in rpt.context_collector:
