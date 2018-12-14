@@ -41,9 +41,12 @@ def qd(args, sql, passed_stanza):
     # 0th call to qd() is from contexts
     # the one that follows it directly is the one we can snatch column names from
     if passed_stanza.left_column_collections == 1:
-        passed_stanza.left_columns_collector = list(map(lambda x: x[0], cur.description))
-        shlog.verbose("Logged left columns to the second stanza (%s) passed: %s" % (passed_stanza,passed_stanza.left_columns_collector))
-        passed_stanza.left_column_collections += 1
+        try:
+            passed_stanza.left_columns_collector = list(map(lambda x: x[0], cur.description))
+            shlog.verbose("Logged left columns to the second stanza (%s) passed: %s" % (passed_stanza,passed_stanza.left_columns_collector))
+            passed_stanza.left_column_collections += 1
+        except:
+            pass
     return results
 
 class Workspace:

@@ -55,7 +55,10 @@ def qdescription(args, sql):
     cur = con.cursor()
     shlog.verbose("description query %s" % sql)
     results = cur.execute (sql)
-    description = [d[0] for d in cur.description]
+    try:
+        description = [d[0] for d in cur.description]
+    except:
+        description = ""
     shlog.verbose("description obtained  %s" % (description))
     con.close()
     return  description

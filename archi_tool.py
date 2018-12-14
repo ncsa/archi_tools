@@ -240,7 +240,7 @@ def ingest_elements(args, sqldbfile):
                  FROM elements_in_model eim
                  INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
                  /*With the correct element ids+versions identified, we can retrieve the matches from the elements table that has all the properties*/
-				 SELECT e.id, e.type, e.name, e.documentation, dme.parent_folder_id as ParentFolder
+				 SELECT e.id, e.class as Type, e.name, e.documentation, dme.parent_folder_id as ParentFolder
                  FROM elements e
                  INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
                  """ % args.prefix
@@ -268,7 +268,7 @@ def ingest_relations(args, sqldbfile):
              FROM relationships_in_model rim
              INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
              /*With the correct relations ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
-             SELECT r.id, null as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
+             SELECT r.id, r.class as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
              FROM relationships r
              INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
              """ % args.prefix
@@ -287,11 +287,12 @@ def ingest_properties(args, sqldbfile):
     # the ingest_properties query retrieves properties from the archidump database
     sql = """/*Retrieve the most recent versions of all properties*/
              /*Properties for elements and folder that no longer exist will not be retrieved in report queries as long as INNER JOIN is used*/
-             WITH properties_prep(parent_ID, name, value, max_parent_verion) as (SELECT parent_ID, name, value, max(parent_version) as max_parent_verion
+             WITH properties_prep(parent_ID, name, max_parent_version) as (SELECT parent_ID, name, max(parent_version) as max_parent_version
              FROM properties
-             GROUP BY parent_ID, name, value)
-             SELECT parent_ID, name, value
-             FROM properties_prep
+             GROUP BY parent_ID, name)
+             SELECT pp.parent_ID, pp.name, p.value
+             FROM properties p
+			 INNER JOIN properties_prep pp on pp.max_parent_version = p.parent_version and pp.name=p.name and pp.parent_id = p.parent_id
              """
     shlog.verbose(sql)
     c_temp.execute(sql)
