@@ -1,10 +1,10 @@
 # Archi_Tool
 Archi_tool is a set of scripts to load information from
-an archimate model int a sqlite databse, where the data
-can hten be used to achieve the following goals:
+an Archimate model database dump into an SQLite database, where the data
+can then be used to achieve the following goals:
 
-- Produce  reports used in day to day management tasks.
-- Asperational goals:
+- Produce reports used in day to day management tasks.
+Aspirational goals:
   - Logical Architecture transfer to a configuration management tool.
   - Component model to feed a financial management tool.
   - Component model for a first cut work breakdown structure for a change.
@@ -17,21 +17,21 @@ can hten be used to achieve the following goals:
 ### Software Installation
 
 The software is in an early state. Early users
-are managers using macs. Since 2.7 is shipped with
-the current macos, The primary version of python
-used is 2.7, Efforts are made to accommodate python 3,
-but testing is not normally done on python 3.
+are managers using Apple Macintosh computers. Since 2.7 is shipped with
+the current MacOS, the primary version of python
+used is 2.7. Efforts are made to accommodate Python 3,
+but testing is not generally done on Python 3.
 
-Also, efforts are current made to package all the
+Also, efforts are currently made to package all the
 underpinnings as copied into the archi_tool package.
 
-However, you wil need to install the following packages
+However, the following packages must be installed for proper operation of the tools:
 
 * xlsxwriter
 * openpyxl
 * lxml
 
-At the current level of development the archi_tool software is
+At the current level of development, the archi_tool software is
 run from the directory holding the software.  Archi_tool software
 is distributed via git as follows:
 
@@ -40,7 +40,7 @@ is distributed via git as follows:
 $ git clone https://github.com/ncsa/archi_tools.git
 ```
 
-Update from the current git master branch. 
+Update from the current git master branch.
 
 ```shell
 #update an archi_tool directory with new stuff.
@@ -49,89 +49,55 @@ $git pull origin master
 
 ### Run-time Conventions
 
-Archi_tool allows for working with several archimate models.  Each
-model is denoted by a prefix. By convention, this is a string
-of capital letters followed by an underscore.  DES_  and LSST_ are
-examples of conventionally formed prefixes.
+Archi_tool allows for working with several Archimate models.  Each model is stored in the Archi database export, along with all of its elements, folders, and connections.
 
-Archi_tool uses the prefix to acquire, cache and identify data files
-associated with a model.   Current conventions are:
+Archi_tool uses the prefix/model name to retrieve the elements relevant to the model.   Current conventions are:
 
 1. The current working directory is the archi_tools directory produced
 by the *git clone*.
 
-1. Archi_tools corrently depends on Exporets of Archi .csv files. The
-supported convention is to:
-         - Export the CSV files into $HOME/Export
-         - Export the files wiht a meaningful prefix, ending in an underscore, e.g. DES_
-
-1. To provide a directory in the default directory named *cache*. Achi_tool copies working files there.
-
-1. After suitable invocations of archi_tool, An sqlite database is created in the current working directory, named `<prefix>archi_tool.db`, for example DEMAND_archi_tool.db
-for the DEMAND_ prefix.
-
-```shell
-$archi_tool -p <prefix> acquire  <archimate file>
-```
-
-moves the exported .csv files and the .archimate file into the cache
-directory named by the prefix.  These files provide stable inputs for
-downstream tool chains.  If you update achimate, and want the updates
-to propagate to the databse, you mush re-acquire the relevant files.
-
-```shell
-#example 
-#cd archi_tool get the stuff exported from archi
-$ archi_tool -p DEMAND_ acquire  /usr/donaldp..../demand.archimate
-# look at the files that were acquired
-$ ls cache/DEMAND_ 
-DEMAND_elements.csv     DEMAND_properties.csv   DEMAND_relations.csv
-ingested.archimate
-```
-
-All of this is not a good practice but is where the software is.
+1. All Archi database exports are located in the *archi_tools/cache* folder.
 
 ### Generating a usable database.
 
-Having done the above steps of export and acquire
+1. Having done all of the above,
 ```shell
-$ ./archi_tool -p DEMAND_ mkdb   #deletes prior database and makes a new, empty db
-$ ./archi_tool -p DEMAND_ ingest #ingest csv into the data and makes supplemental info
-$ ./ldm -p DEMAND  --ingest file.archimate #ingest information about folders
+$ ./archi_tool -p DEMAND mkdb   #deletes prior database and makes a new, empty database
+$ ./archi_tool -p DEMAND ingest #ingest csv into the data and makes supplemental info
 ```
 
-Extra tables are built on assumptions about the  modeling
+Extra tables are built on assumptions about the modeling
 methodologies and conventions used.  The currently supported
-conventions are defiend and implemented in conventions.py 
+conventions are defined and implemented in conventions.py
 
 
-## Heirarchical Report Generator
+## Hierarchical Report Generator
 
-reports.py is small python report generator provided with archi_tools.
+reports.py is a small python report generator provided with archi_tools.
 An individual report is specified by coding a small python subroutine
 which declares objects and relates them to a master object, and
 returns the master object as the function returned.
 
-The basic staps are:
-- Work with your default set in the archi_tools direcotory
-- Compose a report as a pythin file, conventionally named `<topic>_report.py` in the archimate directory
-- run `$ ./reports.py` to make a report as an excel file (optionially automatically running excel to display the report).
+The basic steps are:
+- Work with the default set in the archi_tools directory
+- Compose a report as a python file, conventionally named `<topic>_report.py` in the Archimate directory
+- run `$ ./reports.py` to make a report as an excel file (optionally automatically running excel to display the report).
 
 Example:
 
 ```shell
 # cd archi_tool
 # Assimtion You have built the databse for a a archi
-$ ./reports.py -d DEMAND_archi_tool.db report plateau_report.py
+$ ./reports.py -p DEMAND report plateau_report.py
 ```
 ### Report Specification
 
 
 
 #### StanzaFactory
-A stanza defines a line in a report. A stanzaFactory is an object tha creates many stanzas base on SQL queries. In fact, A stanza is defined by three types of SQL queries.  All of these queries relate to a single subject.  A line about a particular subject may optionally be followed by a substanza  where each line contains inforamation about a different sort of subject.
+A stanza defines a line in a report. A stanzaFactory is an object that creates many stanzas base on SQL queries. Three types of SQL queries define a stanza.  All of these queries relate to a single subject.  A line about a particular subject may optionally be followed by a substanza where each line contains information about a different sort of subject.
 
-The idea directories and files is an intuitive example that illustrates the concept.  the tool can generte a report about each folder in a directory tree.  Each Stanza of the report would contain a line about some particular directory,after that lines, there would be additional lines about the files in each folder.  The high-level stanzas are about the subject of *folders*, each report line about a folder containes a report line about a *file* in a directory.
+The idea directories and files is an intuitive example that illustrates the concept. The tool can generate a report about each folder in a directory tree.  Each Stanza of the report would contain a line about some particular directory, after that lines, there would be additional lines about the files in each folder.  The high-level stanzas are about the subject of *folders*, each report line about a folder contains a report line about a *file* in a directory.
 
 ###  Example report
 
@@ -140,15 +106,15 @@ from reports import *
 
 def plateau_report(args):
 
-    ### The top level organization of this reproet wil be by folder.
-    ### Write a query getting the folders, and let FID be a name know to archi_tool..
-    ###  .. as lj a name referrfin to each folder as it is processed.
+    ### The top-level organization of this report is done by folder.
+    ### Write a query getting the folders, and let FID be a name know to archi_tool...
+    ###  ... as a name referring to each folder as it is processed.
     Folders  = StanzaFactory(args,
                              "SELECT Id FID from folder"
     )
-    
-    ###  For each folder, print  the output of this slect statement...
-    ###  ... in distinct columsn  of the report.
+
+    ###  For each folder, print the output of this select statement...
+    ###  ... in distinct columns of the report.
     Folders.add_report_segment(
         SegmentSQL("SELECT id, Wbs, Name, Documentation, Location, Enclave   from Folder where id = '{FID}'")
     )
@@ -157,64 +123,63 @@ def plateau_report(args):
     #   Below a line for a folder, make additional lines, one for each element in the folder
     ####
 
-    # Let eachlement in the folder be know as ELE as it is processed.
+    # Let each element in the folder be known as ELE as it is processed.
     Elements = StanzaFactory(args,
                              "SELECT Element ELE from Folder_elements  where folder= '{FID}'"
     )
-    
-    # The left-most columns for the elemet are all the arrtibutes of the element itslet.
+
+    # The left-most columns for the elements are all the attributes of the element itself.
     Elements.add_report_segment(
         SegmentSQL("SELECT * from Elements Where id = '{ELE}'")
     )
 
-    #additional columend for each element reports on whether there is a plateay asscocaited with the element
-    #making a kinf of matris.
+    #additional column for each element reports on whether there is a plateau associated with the element
+    #making a kind of matrix.
     Elements.add_report_segment(
        SegmentSQL("SELECT '{PNAME}' FROM relations WHERE source = '{Plateau_id}' and Target = '{Element}'",
                    context = QueryContext(args,"SELECT id Plateau_id, name PNAME  FROM  elements WHERE type = 'Plateau' ORDER BY NAME")
         )
     )
 
-    # Tell the report engine that after elven folder, make the report about the elmements in that folder.
+    # Tell the report engine that after elven folder, make the report about the elements in that folder.
     Folders.set_substanza (Elements)
 
 
-    Folders.report({})
     return Folders
 
 ```
 #### Subject Query
-A subject query defines an ordered list of subjects that are to be reported on. The Quaery yield parameters needed to identify a subject for each line in a report. The subjet Query is passed to a contructor of a StanzaFactory object in its constructor.
+A subject query defines an ordered list of subjects that are to be reported on. The Query yield parameters needed to identify a subject for each line in a report. The subject Query is passed to a constructor of a StanzaFactory object in its constructor.
 
 
 ```python
         Folders = StanzaFactory("SELECT id FROM Folders ORDER BY folder_number")
         ```
 
-In the above example, The StanzaFactory eventually generates a report where there is a line for each folder.  Evidently the returned *id* will be sufficient to locate the particular folder for a particular line in a report.
+In the above example, The StanzaFactory eventually generates a report where there is a line for each folder.  Evidently, the returned *id* is sufficient to locate the particular folder for a particular line in a report.
 
-#### Queries to Generate a Report about a Specifc Subject
-Reports about a specifc subect are realized in a row of a report. It may take more than one SQL query to generate the information needed in a report of a specfic subject. The results of each such query is called a segment. These ideas are implemented in the following way: Each Stanzafacory object reports about a given row.  The rows are composed by one of more segments. Each segment is defined by the output of a segment query. The segment queries use the sql parameters emitted by the subject query, discussed above, to identify the specifc subject for the row current being generated.
+#### Queries to Generate a Report about a Specific Subject
+Reports about a specific subject are realized in a row of a report. It may take more than one SQL query to generate the information needed in a report of a specific subject. The results of each such query are called a segment. These ideas are implemented in the following way: Each Stanzafacory object reports about a given row.  The rows are composed of one or more segments. Each segment is defined by the output of a segment query. The segment queries use the SQL parameters emitted by the subject query, discussed above, to identify the specific subject for the row current being generated.
 
-Segment queries are stored in a list. Segments are generated in left to right order, with the first added report segment being the left-most segement of the report. Each returned item frem the select statement is rendered as its own internal cell.  I.e each slected itme would be in its own cell in a report rendered as a spreadsheet.
+Segment queries are stored in a list. Segments are generated in left to right order, with the first added report segment being the left-most segment of the report. Each returned item from the select statement is rendered as its own internal cell.  I.e., each selected item would be in its own cell in a report rendered as a spreadsheet.
 
 ```python
      Folders.add_report_segment(
          SegmentSQL("SELECT id, depth from Folders where id = '%s'")
      )
 ```
-In the above example, the internal database ID, depth of folder in a heirarcy, and name of folder are reported. To generate a specifinc line the %s is replaces wth the id produced by the Subject query, describe in the previous section.
+In the above example, the internal database ID, depth of folder in a hierarchy, and the name of the folder are reported. To generate a specific line, the %s is replaced with the id produced by the Subject query, described in the previous section.
 
 ### Additional Context for a Segment Query.
 
-Often an SQL query to generate a report needs more information that that the parameters that  describe the subject of a row. Also, sometiems the precise number of cells in a segment can vary. In each case, case additional context is needed. A query supporting additional context can be supplied the the *SegmentSQL* object constructor by the optional *context* argument.
+Often an SQL query to generate a report needs more information than the parameters that describe the subject of a row. Also, sometimes the precise number of cells in a segment can vary. In each case, additional case context is needed. A query supporting additional context can be supplied the *SegmentSQL* object constructor by the optional *context* argument.
 
 ```python
     Folders.add_report_segment("....",
         vcontext = QueryContext(args,"select ID from Parameters")
    )
 ```
-When context is supplied, the SegmentSQL is repeated for each row returned by the context query.  The context query, above, causes a rwo to be genertes for each pararmeter. for each such colum the ID is the paratmeter is available as well as the parameters defining the subject of a row.     More later....
+When the context is supplied, the SegmentSQL is repeated for each row returned by the context query.  The context query, above, causes a row to be generated for each parameter. For each such column, the ID is the parameter is available as well as the parameters defining the subject of a row.
 
 ### Substanzas
 ```python
@@ -225,4 +190,7 @@ When context is supplied, the SegmentSQL is repeated for each row returned by th
         "SELECT id from Contents where FolderId= '%s'
      )
      Folders.set_substanza (Contents)                                                                                         ```
+
+
+TO BE CONTINUED
                                                                                                                              
