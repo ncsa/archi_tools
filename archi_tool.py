@@ -139,6 +139,24 @@ dualTable.hfm       =[     t ]
 dualTable.hdt       =['text']
 dualTable.check()
 
+#Record ID's that have been folder from CSV's to distinguich from those created.
+viewsTable = SQLTable()
+viewsTable.tableName = 'VIEWS'
+viewsTable.columns   =['Id'  ,'Type'  ,'Name','Documentation','Viewpoint','Parent_folder_id']
+viewsTable.hfm       =[     t,       t,     t,              t,          t,                 t]
+viewsTable.hdt       =['text',  'text','text',         'text',     'text',            'text']
+viewsTable.check()
+
+#Record ID's that have been folder from CSV's to distinguich from those created.
+viewobjectsTable = SQLTable()
+viewobjectsTable.tableName = 'VIEW_OBJECTS'
+viewobjectsTable.columns   =['View_id','Object_id','Class', 'Name']
+viewobjectsTable.hfm       =[        t,          t,      t,      t]
+viewobjectsTable.hdt       =['text'   ,     'text', 'text', 'text']
+viewobjectsTable.check()
+
+
+
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
@@ -204,6 +222,8 @@ def mkdb (args):
     ingestTable.mkTable(con)
     ingestedTable.mkTable(con)
     folderTable.mkTable(con)
+    viewsTable.mkTable(con)
+    viewobjectsTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
     return
@@ -218,6 +238,8 @@ def ingest(args):
         ingest_relations(args, v)
         ingest_properties(args, v)
         ingest_folders(args, v)
+        ingest_views(args, v)
+        ingest_view_objects(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -340,6 +362,61 @@ def ingest_folders(args, sqldbfile):
     rows = c_temp.fetchall()
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
+
+def ingest_views(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """/*Retrieve id and the most recent version of a model matched by name*/
+             /*desired_model should return one single row*/
+             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+             /*Model stores all views that ever existed in all the models, regardless of they exist in the recent versions*/
+             /*That's why we retrieve the views that match the model id+model version from desired_model*/
+             desired_views(view_id, view_version, parent_folder_id) AS (SELECT view_id, view_version, parent_folder_id
+             FROM views_in_model vim
+             INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id)
+             /*With the correct view ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
+             SELECT v.id, v.class as Type, v.name, v.documentation, v.viewpoint, dvo.parent_folder_id
+             FROM views v
+             INNER JOIN desired_views dvo on dvo.view_id=v.id AND dvo.view_version=v.version
+             """ % args.prefix
+    shlog.verbose(sql)
+    c_temp.execute(sql)
+    rows = c_temp.fetchall()
+    viewsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEWS']])
+
+def ingest_view_objects(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """/*Retrieve id and the most recent version of a model matched by name*/
+             /*desired_model should return one single row*/
+             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+             /*Model stores all objects that ever existed in all the models, regardless of they exist in the recent versions*/
+             /*That's why we retrieve the view objects that match the model id+model version from desired_model*/
+             desired_views(view_id, view_version) AS (SELECT view_id, view_version
+             FROM views_in_model vim
+             INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id),
+             /*objects are versioned as well, so we get their ids too*/
+             objects_in_view(view_id, view_version, object_id, object_version) AS (SELECT DISTINCT dv.view_id, dv.view_version, voiv.object_id, voiv.object_version
+             FROM desired_views dv
+             INNER JOIN views_objects_in_view voiv on voiv.view_id=dv.view_id AND voiv.view_version=dv.view_version
+             )
+             /*With the correct view object ids+versions identified, we can retrieve the matches from the views_objects table that has all the properties*/
+             SELECT oiv.view_id, oiv.object_id, vo.class, vo.name
+             FROM objects_in_view oiv
+             INNER JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version
+             """ % args.prefix
+    shlog.verbose(sql)
+    c_temp.execute(sql)
+    rows = c_temp.fetchall()
+    viewobjectsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEW_OBJECTS']])
 
     
 ###################################################################
