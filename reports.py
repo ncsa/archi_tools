@@ -77,14 +77,14 @@ class Workspace:
             # special header handling
             # if rowno is 0, that means we are looking at the header row
             # due to the way content vs header are implemented, self.header is offset by 1 compared to colno
-            # for example, B2 value (colno 1 rowno 0) is locaed in self.header[0]. hence, colno-1 si implemented
+            # for example, B2 value (colno 1 rowno 0) is located in self.header[0]. hence, colno-1 is implemented
             if rowno == 0 and colno > 0:
-                try:
-                    max_chars = max(max_chars, len("%s" % self.header[colno-1]))
-                except:
-                    # if an exception is thrown, it's most likely the IndexError: list index out of range
-                    # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
-                    pass
+                # try:
+                max_chars = max(max_chars, len("%s" % self.header[colno-1]))
+                # except:
+                #     # if an exception is thrown, it's most likely the IndexError: list index out of range
+                #     # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
+                #     pass
         shlog.debug("XXX %s %s" %  (colno, max_chars*2)) 
         return max_chars
     def add_element(self, content_element):
@@ -122,7 +122,7 @@ class Workspace:
             for c in keys:
                 worksheet.write(r, c, self.content[r][c], x)
 
-        for c in range(self.col_max):
+        for c in range(self.col_max+1):
                 maxc = min(self.max_chars(c), 60)
                 maxc = max(maxc, 1) # at least one char
                 worksheet.set_column(c,c, maxc)
@@ -336,7 +336,10 @@ if __name__ == "__main__":
         shlog.normal("Terminating Excel")
         os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
     # compile header row names into rpt.context_collector
-    rpt.context_collector.remove([])
+    try:
+        rpt.context_collector.remove([])
+    except:
+        rpt.context_collector = []
     for i in rpt.context_collector:
         rpt.left_columns_collector.append(i[0])
     rpt.workspace.header = rpt.left_columns_collector
