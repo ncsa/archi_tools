@@ -348,7 +348,7 @@ def ingest_folders(args, sqldbfile):
              
              UNION ALL
                     
-             SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| '.' || cast(allfolders.name as text) as depth
+             SELECT allfolders.id, allfolders.Name, cast(depths.depth as text)|| ' >' || cast(allfolders.name as text) as depth
              FROM allfolders
              JOIN depths ON allfolders.parent_id = depths.id
              ) 

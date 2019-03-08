@@ -3,8 +3,8 @@ from reports import *
 def plateau_diff(args):
 
     # enter table names separated by a semicolon (no spaces)
-    FirstTable = 'dummy3;1 L1 Single Frame Processing Retained Data Management View'
-    SecondTable = 'dummy2'
+    FirstTable = 'dummy3'
+    SecondTable = 'dummy2;dummy1'
 
     FirstIn = FirstTable.split(";")
     SecondIn = SecondTable.split(";")
@@ -52,9 +52,10 @@ def plateau_diff(args):
                                 FROM SECONDUNIQUE su""".replace('%s',FirstTable).replace('%r',SecondTable)
                             )
     Uniques.add_report_segment(
-        SegmentSQL("""SELECT e.id as 'Element ID', e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in'
+        SegmentSQL("""SELECT e.id as 'Element ID', f.Depth as 'Folder', e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in'
                       FROM elements e
-                      WHERE ID='{Object_id}'""")
+                      LEFT JOIN FOLDER f on f.ID = e.ParentFolder
+                      WHERE e.ID='{Object_id}'""")
     )
 
 
