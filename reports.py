@@ -79,12 +79,12 @@ class Workspace:
             # due to the way content vs header are implemented, self.header is offset by 1 compared to colno
             # for example, B2 value (colno 1 rowno 0) is located in self.header[0]. hence, colno-1 is implemented
             if rowno == 0 and colno > 0:
-                # try:
-                max_chars = max(max_chars, len("%s" % self.header[colno-1]))
-                # except:
+                try:
+                    max_chars = max(max_chars, len("%s" % self.header[colno-1]))
+                except:
                 #     # if an exception is thrown, it's most likely the IndexError: list index out of range
                 #     # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
-                #     pass
+                    pass
         shlog.debug("XXX %s %s" %  (colno, max_chars*2)) 
         return max_chars
     def add_element(self, content_element):
