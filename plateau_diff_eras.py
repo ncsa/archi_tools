@@ -3,8 +3,8 @@ from reports import *
 def plateau_diff_eras(args):
 
     # enter table names separated by a semicolon (no spaces)
-    FirstTable = 'Era:Sep2018'
-    SecondTable = 'Era:Dec2019'
+    FirstTable = 'Era:Dec2019'
+    SecondTable = 'WBS:Spring2019'
 
     FirstIn = FirstTable.split(";")
     SecondIn = SecondTable.split(";")
