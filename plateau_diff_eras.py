@@ -53,7 +53,7 @@ def plateau_diff_eras(args):
                                 FROM SECONDUNIQUE su""".replace('%s',FirstTable).replace('%r',SecondTable)
                             )
     Uniques.add_report_segment(
-        SegmentSQL("""SELECT e.id as 'Element ID', f.Depth as 'Folder', e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in', p.Key as 'Era'
+        SegmentSQL("""SELECT /* e.id as 'Element ID', f.Depth as 'Folder', */e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in', p.Key as 'Era'
                       FROM elements e
                       INNER JOIN PROPERTIES p on p.id = '{View_id}' AND (p.Key IN (%s) OR p.Key IN (%r))
                       LEFT JOIN FOLDER f on f.ID = e.ParentFolder
