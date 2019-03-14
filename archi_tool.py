@@ -288,7 +288,9 @@ def ingest_relations(args, sqldbfile):
 			 /*That's why we retrieve relations that match the model id+model version from desired_model*/
              desired_model_relations(relationship_id, relationship_version) AS (SELECT relationship_id, relationship_version
              FROM relationships_in_model rim
-             INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id)
+             INNER JOIN desired_model dm on dm.version=rim.model_version AND dm.id=rim.model_id
+             /* Hotfix: remove relationship_id not found in views */
+			 WHERE relationship_id in (SELECT DISTINCT relationship_id FROM views_connections))
              /*With the correct relations ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
              SELECT r.id, r.class as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
              FROM relationships r
