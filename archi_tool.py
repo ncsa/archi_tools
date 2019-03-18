@@ -155,6 +155,14 @@ viewobjectsTable.hfm       =[        t,          t,      t,      t,         t]
 viewobjectsTable.hdt       =['text'   ,     'text', 'text', 'text',    'text']
 viewobjectsTable.check()
 
+#Record ID's that have been folder from CSV's to distinguich from those created.
+connectionsTable = SQLTable()
+connectionsTable.tableName = 'CONNECTIONS'
+connectionsTable.columns   =['connection_id','view_id','relationship_id']
+connectionsTable.hfm       =[              t,         t,               t]
+connectionsTable.hdt       =['text'         ,    'text',          'text']
+connectionsTable.check()
+
 
 
 def q(args, sql):
@@ -224,6 +232,7 @@ def mkdb (args):
     folderTable.mkTable(con)
     viewsTable.mkTable(con)
     viewobjectsTable.mkTable(con)
+    connectionsTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
     return
@@ -240,6 +249,7 @@ def ingest(args):
         ingest_folders(args, v)
         ingest_views(args, v)
         ingest_view_objects(args, v)
+        ingest_connections(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -419,6 +429,34 @@ def ingest_view_objects(args, sqldbfile):
     rows = c_temp.fetchall()
     viewobjectsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEW_OBJECTS']])
+
+
+def ingest_connections(args, sqldbfile):
+    shlog.normal ("about to open %s",sqldbfile)
+    con = sqlite3.connect(args.dbfile)
+    con_temp = sqlite3.connect(sqldbfile)
+    c_temp = con_temp.cursor()
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """/*Retrieve id and the most recent version of a model matched by name*/
+             /*desired_model should return one single row*/
+             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+             /*Model stores all views that ever existed in all the models, regardless of they exist in the recent versions*/
+             /*That's why we retrieve the views that match the model id+model version from desired_model*/
+             desired_views(view_id, view_version, parent_folder_id) AS (SELECT view_id, view_version, parent_folder_id
+             FROM views_in_model vim
+             INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id),
+			 /* Now that we have the most recent view versions from the most recent model, we can get the most recent connections */
+			 desired_connections(connection_id, connection_version, view_version) AS (SELECT DISTINCT vciv.connection_id, vciv.connection_version, vciv.view_version 
+			 FROM desired_views dv
+			 INNER JOIN views_connections_in_view vciv on vciv.view_id = dv.view_id AND vciv.view_version = dv.view_version)
+			 SELECT vc.id as connection_id, vc.container_id as view_id, vc.relationship_id
+			 FROM views_connections vc
+			 INNER JOIN desired_connections dc on vc.id=dc.connection_id AND vc.version = dc.connection_version""" % args.prefix
+    shlog.verbose(sql)
+    c_temp.execute(sql)
+    rows = c_temp.fetchall()
+    connectionsTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),sqldbfile,'CONNECTIONS']])
 
     
 ###################################################################
