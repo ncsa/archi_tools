@@ -446,10 +446,10 @@ def ingest_connections(args, sqldbfile):
              FROM views_in_model vim
              INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id),
 			 /* Now that we have the most recent view versions from the most recent model, we can get the most recent connections */
-			 desired_connections(connection_id, connection_version, view_version) AS (SELECT DISTINCT vciv.connection_id, vciv.connection_version, vciv.view_version 
+			 desired_connections(connection_id, connection_version, view_version, view_id) AS (SELECT DISTINCT vciv.connection_id, vciv.connection_version, vciv.view_version, vciv.view_id 
 			 FROM desired_views dv
 			 INNER JOIN views_connections_in_view vciv on vciv.view_id = dv.view_id AND vciv.view_version = dv.view_version)
-			 SELECT vc.id as connection_id, vc.container_id as view_id, vc.relationship_id
+			 SELECT vc.id as connection_id, dc.view_id, vc.relationship_id
 			 FROM views_connections vc
 			 INNER JOIN desired_connections dc on vc.id=dc.connection_id AND vc.version = dc.connection_version""" % args.prefix
     shlog.verbose(sql)
