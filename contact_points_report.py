@@ -2,16 +2,29 @@ from reports import *
 
 def contact_points_report(args):
 
+    # enter view and enclave names separated by semicolumns, without spaces
     view_names = 'Spectrograph Archiving Service Data Management'
-    EnclaveOne = 'Enc:NCSA'
-    EnclaveTwo = 'Enc:L1'
+    EnclaveSetOne = 'Enc:NCSA'
+    EnclaveSetTwo = 'Enc:L1;Scope:NCOA'
 
     view_split = view_names.split(";")
+    EnclaveOneSplit = EnclaveSetOne.split(";")
+    EnclaveTwoSplit = EnclaveSetTwo.split(";")
 
     views = "'"
     for table in view_split:
         views += table + "', '"
     views = views[:-3]
+
+    EnclaveOne = "'"
+    for enclave in EnclaveOneSplit:
+        EnclaveOne += enclave + "', '"
+    EnclaveOne = EnclaveOne[:-3]
+
+    EnclaveTwo = "'"
+    for enclave in EnclaveTwoSplit:
+        EnclaveTwo += enclave + "', '"
+    EnclaveTwo = EnclaveTwo[:-3]
 
 
 
@@ -34,8 +47,8 @@ def contact_points_report(args):
                                       INNER JOIN RELATIONS r on r.source = vo.Object_id
                                       INNER JOIN VIEW_OBJECTS vo1 on vo1.Object_id = r.Target
                                       INNER JOIN VIEWS v1 on v1.id = vo1.View_id
-                                      INNER JOIN PROPERTIES p on p.id=vo.Object_id AND (p.key = '%s' or p.key = '%r')
-                                      INNER JOIN PROPERTIES p1 on p1.id=vo1.Object_id AND (p1.key = '%s' or p1.key = '%r')
+                                      INNER JOIN PROPERTIES p on p.id=vo.Object_id AND (p.key IN (%s) or p.key IN (%r))
+                                      INNER JOIN PROPERTIES p1 on p1.id=vo1.Object_id AND (p1.key IN (%s) or p1.key IN (%r))
                                       INNER JOIN ELEMENTS e on e.id =r.source 
                                       WHERE v.Name in (%l) AND v1.Name in (%l)
                                             AND p.Key <> p1.Key""".replace('%l', views).replace('%s', EnclaveOne).replace('%r', EnclaveTwo)
