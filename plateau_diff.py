@@ -3,7 +3,7 @@ from reports import *
 def plateau_diff(args):
 
     # enter table names separated by a semicolon (no spaces)
-    FirstTable = 'Spectrograph Offline Processing Data Management View'
+    FirstTable = 'Data Backbone Application Behavior to Provisioning Map View'
     SecondTable = 'dummy'
 
     FirstIn = FirstTable.split(";")
@@ -52,10 +52,23 @@ def plateau_diff(args):
                                 FROM SECONDUNIQUE su""".replace('%s',FirstTable).replace('%r',SecondTable)
                             )
     Uniques.add_report_segment(
-        SegmentSQL("""SELECT /* e.id as 'Element ID', f.Depth as 'Folder', */e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in'
+        SegmentSQL("""SELECT e.id as 'Element_ID', f.Depth as 'Folder', e.Name as 'Element Name', e.Type, e.Documentation, '{ModelName}' as 'Uniquely present in'
                       FROM elements e
                       LEFT JOIN FOLDER f on f.ID = e.ParentFolder
                       WHERE e.ID='{Object_id}'""")
+    )
+
+    Uniques.add_report_segment(
+        SegmentSQL(
+            """SELECT 'x'
+               FROM RELATIONS r
+               INNER JOIN ELEMENTS e on e.ID = r.Source
+               WHERE e.Name= '{PlateauName}'
+               AND r.Target = '{Object_id}'
+               AND r.Type = 'CompositionRelationship'""",
+            context=QueryContext(args,
+                                 "SELECT Name as PlateauName FROM ELEMENTS WHERE Type = 'Plateau'")
+        )
     )
 
 

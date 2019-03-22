@@ -60,6 +60,18 @@ def plateau_diff_eras(args):
                       WHERE e.ID='{Object_id}'""".replace('%s',FirstTable).replace('%r',SecondTable))
     )
 
+    Uniques.add_report_segment(
+        SegmentSQL(
+            """SELECT 'x'
+               FROM RELATIONS r
+               INNER JOIN ELEMENTS e on e.ID = r.Source
+               WHERE e.Name= '{PlateauName}'
+               AND r.Target = '{Object_id}'
+               AND r.Type = 'CompositionRelationship'""",
+            context=QueryContext(args,
+                                 "SELECT Name as PlateauName FROM ELEMENTS WHERE Type = 'Plateau'")
+        )
+    )
 
     # Folders.report({})
     return Uniques
