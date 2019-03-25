@@ -1,6 +1,6 @@
 from reports import *
 
-def undescribed_view_report(args):
+def validate_undescribed_elements(args):
 
     View = 'Non L1 Base View'
 

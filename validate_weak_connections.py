@@ -1,6 +1,6 @@
 from reports import *
 
-def weak_connections_report(args):
+def validate_weak_connections(args):
 
 
 

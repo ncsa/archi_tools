@@ -1,6 +1,6 @@
 from reports import *
 
-def undescribed_report(args):
+def validate_undescribed_elements(args):
 
 
 

@@ -54,7 +54,7 @@ def contact_points_report(args):
                                             AND p.Key <> p1.Key""".replace('%l', views).replace('%s', EnclaveOne).replace('%r', EnclaveTwo)
     )
     SourceObjects.add_report_segment(
-        SegmentSQL("SELECT '{SourceObject}' AS SourceObject, '{SourceName}' AS SourceName, '{SourceKey}' as Key ")
+        SegmentSQL("SELECT '{SourceObject}' AS SourceObject, '{SourceName}' AS SourceName, ' ' as Blank1, ' ' as Blank2, '{SourceKey}' as Key ")
     )
 
     ViewList.set_substanza(SourceObjects)
