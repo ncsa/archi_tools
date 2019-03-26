@@ -2,73 +2,50 @@ from reports import *
 
 def contact_points_report(args):
 
-    # enter view and enclave names separated by semicolumns, without spaces
-    view_names = 'Spectrograph Archiving Service Data Management'
-    EnclaveSetOne = 'Enc:NCSA'
-    EnclaveSetTwo = 'Enc:L1;Scope:NCOA'
-
-    view_split = view_names.split(";")
-    EnclaveOneSplit = EnclaveSetOne.split(";")
-    EnclaveTwoSplit = EnclaveSetTwo.split(";")
-
-    views = "'"
-    for table in view_split:
-        views += table + "', '"
-    views = views[:-3]
-
-    EnclaveOne = "'"
-    for enclave in EnclaveOneSplit:
-        EnclaveOne += enclave + "', '"
-    EnclaveOne = EnclaveOne[:-3]
-
-    EnclaveTwo = "'"
-    for enclave in EnclaveTwoSplit:
-        EnclaveTwo += enclave + "', '"
-    EnclaveTwo = EnclaveTwo[:-3]
-
-
 
     ViewList  = StanzaFactory(args,
-                             """SELECT id as View_id
+                             """SELECT DISTINCT v.id as View_id
                                 FROM VIEWS v
-                                WHERE v.name in (%s)""" % views
+                                INNER JOIN CONNECTIONS c on c.view_id = v.id
+                                INNER JOIN RELATIONS r on r.id = c.relationship_id
+                                INNER JOIN PROPERTIES p on p.id=r.Source AND (p.key LIKE 'Enc:%')
+                                INNER JOIN PROPERTIES p1 on p1.id=r.Target AND (p1.key LIKE 'Enc:%')
+                                WHERE p.Key <> p1.Key"""
     )
     ViewList.add_report_segment(
-        SegmentSQL("""SELECT Name
+        SegmentSQL("""SELECT Name as ViewName, '' as SourceName, '' as TargetName, '' as Enclave, '' as Relation, '' as Description
                       FROM VIEWS v
                       WHERE v.id='{View_id}'""")
     )
 
 
 
-    SourceObjects = StanzaFactory(args, """SELECT DISTINCT vo.Object_id as SourceObject, e.Name as SourceName, p.Key as SourceKey
-                                      FROM VIEW_OBJECTS vo
-                                      INNER JOIN VIEWS v on v.id = vo.View_id
-                                      INNER JOIN RELATIONS r on r.source = vo.Object_id
-                                      INNER JOIN VIEW_OBJECTS vo1 on vo1.Object_id = r.Target
-                                      INNER JOIN VIEWS v1 on v1.id = vo1.View_id
-                                      INNER JOIN PROPERTIES p on p.id=vo.Object_id AND (p.key IN (%s) or p.key IN (%r))
-                                      INNER JOIN PROPERTIES p1 on p1.id=vo1.Object_id AND (p1.key IN (%s) or p1.key IN (%r))
-                                      INNER JOIN ELEMENTS e on e.id =r.source 
-                                      WHERE v.Name in (%l) AND v1.Name in (%l)
-                                            AND p.Key <> p1.Key""".replace('%l', views).replace('%s', EnclaveOne).replace('%r', EnclaveTwo)
+    SourceObjects = StanzaFactory(args, """SELECT DISTINCT r.Source as SourceObject, e.Name as SourceName, p.Key as SourceKey, v.id as View_id, e.Documentation as SourceDoc
+                                           FROM VIEWS v
+                                           INNER JOIN CONNECTIONS c on c.view_id = v.id
+                                           INNER JOIN RELATIONS r on r.id = c.relationship_id
+                                           INNER JOIN PROPERTIES p on p.id=r.Source AND (p.key LIKE 'Enc:%')
+                                           INNER JOIN PROPERTIES p1 on p1.id=r.Target AND (p1.key LIKE 'Enc:%')
+                                           INNER JOIN ELEMENTS e on e.id = r.Source
+                                           WHERE v.id = '{View_id}'
+                                           AND p.Key <> p1.Key"""
     )
     SourceObjects.add_report_segment(
-        SegmentSQL("SELECT '{SourceObject}' AS SourceObject, '{SourceName}' AS SourceName, ' ' as Blank1, ' ' as Blank2, '{SourceKey}' as Key ")
+        SegmentSQL("""SELECT ' ' as Blank0, '{SourceName}' AS SourceName, ' ' as Blank1, '{SourceKey}' as Key, ' ' as Blank2, "{SourceDoc}" as SourceDoc """)
     )
 
     ViewList.set_substanza(SourceObjects)
 
-    TargetObjects = StanzaFactory(args, """SELECT r.Type, r.Name as RelationshipName, e.Name, p.Key as TargetKey
-                                           FROM VIEW_OBJECTS vo
-                                           INNER JOIN VIEWS v on v.id = vo.View_id
-                                           INNER JOIN RELATIONS r on r.source = vo.Object_id
-                                           INNER JOIN PROPERTIES p on p.id=r.Target AND p.Key <> '{SourceKey}'
-                                           INNER JOIN ELEMENTS e on e.id = r.Target
-                                           WHERE v.Name in (%l) AND r.Source = '{SourceObject}'""".replace('%l', views)
+    TargetObjects = StanzaFactory(args, """SELECT DISTINCT r.Type, r.Name as RelationshipName, e.Name, p.Key as TargetKey, e.Documentation as TargetDoc
+                                          FROM VIEWS v
+                                          INNER JOIN CONNECTIONS c on c.view_id = v.id
+                                          INNER JOIN RELATIONS r on r.id = c.relationship_id
+                                          INNER JOIN PROPERTIES p on p.id=r.Target AND p.Key <> '{SourceKey}'
+                                          INNER JOIN ELEMENTS e on e.id = r.Target
+                                          WHERE v.id = '{View_id}' AND r.Source = '{SourceObject}'"""
                                   )
     TargetObjects.add_report_segment(
-        SegmentSQL("SELECT ' ' as Blank, '{Type}' AS Type, '{RelationshipName}' AS Relationship, '{Name}' as ObjectName, '{TargetKey}' as TargetKey ")
+        SegmentSQL("""SELECT ' ' as Blank1, ' ' as Blank0, '{Name}' as ObjectName, '{TargetKey}' as TargetKey, '{RelationshipName}' as Relationship, "{TargetDoc}" as TargetDoc """)
     )
 
     SourceObjects.set_substanza(TargetObjects)
