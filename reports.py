@@ -126,6 +126,8 @@ class Workspace:
                 maxc = min(self.max_chars(c), 60)
                 maxc = max(maxc, 1) # at least one char
                 worksheet.set_column(c,c, maxc)
+        # but, there's one more thing...
+        worksheet.freeze_panes(1, 0)
         workbook.close()
         if self.args.show : os.system('open -a "Microsoft Excel" %s' % self.args.excelfile)
              
