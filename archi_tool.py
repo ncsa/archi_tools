@@ -171,6 +171,16 @@ enclaveTable.hfm       =[     t,     t,              t,          t]
 enclaveTable.hdt       =['text','text',         'text',     'text']
 enclaveTable.check()
 
+# this is the ENclave relationship assistant table
+enclavecontentTable = SQLTable()
+enclavecontentTable.tableName = 'ENCLAVE_CONTENT'
+enclavecontentTable.columns   =['Object_id','Enclave_id']
+enclavecontentTable.hfm       =[          t,            t]
+enclavecontentTable.hdt       =['text'     ,       'text']
+enclavecontentTable.check()
+
+
+
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
@@ -240,6 +250,7 @@ def mkdb (args):
     viewobjectsTable.mkTable(con)
     connectionsTable.mkTable(con)
     enclaveTable.mkTable(con)
+    enclavecontentTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
     return
@@ -258,6 +269,7 @@ def ingest(args):
         ingest_view_objects(args, v)
         ingest_connections(args, v)
         ingest_enclaves(args, v)
+        ingest_enclave_content(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -487,6 +499,23 @@ def ingest_enclaves(args, sqldbfile):
     rows = c_temp.fetchall()
     enclaveTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),args.dbfile,'ENCLAVES']])
+
+
+def ingest_enclave_content(args, sqldbfile):
+    shlog.normal ("about to open %s",args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    # note: ingest_enclave_content connects to the same DB for source and output data
+    con_temp = sqlite3.connect(args.dbfile)
+    c_temp = con_temp.cursor()
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """SELECT DISTINCT r.Target as Object_id, e.Id as Enclave_id
+             FROM RELATIONS r
+             INNER JOIN ENCLAVES e on e.Id = r.Source"""
+    shlog.verbose(sql)
+    c_temp.execute(sql)
+    rows = c_temp.fetchall()
+    enclavecontentTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),args.dbfile,'ENCLAVE_CONTENT']])
     
 ###################################################################
 #
