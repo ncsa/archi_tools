@@ -163,7 +163,13 @@ connectionsTable.hfm       =[              t,         t,               t]
 connectionsTable.hdt       =['text'         ,    'text',          'text']
 connectionsTable.check()
 
-
+# this is the Enclave tbale
+enclaveTable = SQLTable()
+enclaveTable.tableName = 'ENCLAVES'
+enclaveTable.columns   =['Id'  ,'Name','Documentation', 'Location']
+enclaveTable.hfm       =[     t,     t,              t,          t]
+enclaveTable.hdt       =['text','text',         'text',     'text']
+enclaveTable.check()
 
 def q(args, sql):
     #a funnel routned for report queries, main benefit is query printing
@@ -233,6 +239,7 @@ def mkdb (args):
     viewsTable.mkTable(con)
     viewobjectsTable.mkTable(con)
     connectionsTable.mkTable(con)
+    enclaveTable.mkTable(con)
     dualTable.mkTable(con)
     q(args,"insert into dual values ('X')")
     return
@@ -250,6 +257,7 @@ def ingest(args):
         ingest_views(args, v)
         ingest_view_objects(args, v)
         ingest_connections(args, v)
+        ingest_enclaves(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -458,6 +466,27 @@ def ingest_connections(args, sqldbfile):
     connectionsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'CONNECTIONS']])
 
+
+def ingest_enclaves(args, sqldbfile):
+    shlog.normal ("about to open %s",args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    # note: ingest_enclaves connects to the same DB for source and output data
+    con_temp = sqlite3.connect(args.dbfile)
+    c_temp = con_temp.cursor()
+    # the ingest_properties query retrieves properties from the archidump database
+    sql = """SELECT DISTINCT e.Id, e.Name, e.Documentation, e1.Name as Location
+          /* Get all groupings  from the Enclave FOLDER*/
+          FROM FOLDER f
+          INNER JOIN ELEMENTS  e on e.ParentFolder = f.Id and e.Type = 'Grouping'
+          /* Get all locations by linking relations and then elements again*/
+          INNER JOIN RELATIONS r on r.Target = e.Id
+          INNER JOIN ELEMENTS e1 on e1.ID = r.Source
+          WHERE f.Name = 'Enclaves' AND e1.Type = 'Location'"""
+    shlog.verbose(sql)
+    c_temp.execute(sql)
+    rows = c_temp.fetchall()
+    enclaveTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),args.dbfile,'ENCLAVES']])
     
 ###################################################################
 #
