@@ -440,9 +440,9 @@ def ingest_view_objects(args, sqldbfile):
              INNER JOIN views_objects_in_view voiv on voiv.view_id=dv.view_id AND voiv.view_version=dv.view_version
              )
              /*With the correct view object ids+versions identified, we can retrieve the matches from the views_objects table that has all the properties*/
-             SELECT oiv.view_id, vo.element_id, vo.class, vo.name, vo.content
+             SELECT oiv.view_id, oiv.object_id, vo.class, vo.name, vo.content
              FROM objects_in_view oiv
-             INNER JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version
+             LEFT JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version
              """ % args.prefix
     shlog.verbose(sql)
     c_temp.execute(sql)
