@@ -266,10 +266,10 @@ def ingest(args):
         ingest_properties(args, v)
         ingest_folders(args, v)
         ingest_views(args, v)
-        ingest_view_objects(args, v)
         ingest_connections(args, v)
         ingest_enclaves(args, v)
         ingest_enclave_content(args, v)
+        ingest_view_objects(args, v)
         # else:
         #     shlog.error ("Cannot identify type of %s" % v)
         #     exit(1)
@@ -420,35 +420,61 @@ def ingest_views(args, sqldbfile):
     viewsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEWS']])
 
+# def ingest_view_objects(args, sqldbfile):
+#     shlog.normal ("about to open %s",sqldbfile)
+#     con = sqlite3.connect(args.dbfile)
+#     con_temp = sqlite3.connect(sqldbfile)
+#     c_temp = con_temp.cursor()
+#     # the ingest_properties query retrieves properties from the archidump database
+#     sql = """/*Retrieve id and the most recent version of a model matched by name*/
+#              /*desired_model should return one single row*/
+#              WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
+#              /*Model stores all objects that ever existed in all the models, regardless of they exist in the recent versions*/
+#              /*That's why we retrieve the view objects that match the model id+model version from desired_model*/
+#              desired_views(view_id, view_version) AS (SELECT view_id, view_version
+#              FROM views_in_model vim
+#              INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id),
+#              /*objects are versioned as well, so we get their ids too*/
+#              objects_in_view(view_id, view_version, object_id, object_version) AS (SELECT DISTINCT dv.view_id, dv.view_version, voiv.object_id, voiv.object_version
+#              FROM desired_views dv
+#              INNER JOIN views_objects_in_view voiv on voiv.view_id=dv.view_id AND voiv.view_version=dv.view_version
+#              )
+#              /*With the correct view object ids+versions identified, we can retrieve the matches from the views_objects table that has all the properties*/
+#              SELECT oiv.view_id, vo.element_id, vo.class, vo.name, vo.content
+#              FROM objects_in_view oiv
+#              INNER JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version
+#              """ % args.prefix
+#     shlog.verbose(sql)
+#     c_temp.execute(sql)
+#     rows = c_temp.fetchall()
+#     viewobjectsTable.insert(con, rows)
+#     ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEW_OBJECTS']])
+
+
+# temp fix for non-ingestion
 def ingest_view_objects(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal ("about to open %s",args.dbfile)
     con = sqlite3.connect(args.dbfile)
-    con_temp = sqlite3.connect(sqldbfile)
+    con_temp = sqlite3.connect(args.dbfile)
     c_temp = con_temp.cursor()
     # the ingest_properties query retrieves properties from the archidump database
-    sql = """/*Retrieve id and the most recent version of a model matched by name*/
-             /*desired_model should return one single row*/
-             WITH desired_model(id, version, created_on) AS (SELECT id, version, max(created_on) FROM models m WHERE m.name='%s' GROUP BY id),
-             /*Model stores all objects that ever existed in all the models, regardless of they exist in the recent versions*/
-             /*That's why we retrieve the view objects that match the model id+model version from desired_model*/
-             desired_views(view_id, view_version) AS (SELECT view_id, view_version
-             FROM views_in_model vim
-             INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id),
-             /*objects are versioned as well, so we get their ids too*/
-             objects_in_view(view_id, view_version, object_id, object_version) AS (SELECT DISTINCT dv.view_id, dv.view_version, voiv.object_id, voiv.object_version
-             FROM desired_views dv
-             INNER JOIN views_objects_in_view voiv on voiv.view_id=dv.view_id AND voiv.view_version=dv.view_version
-             )
-             /*With the correct view object ids+versions identified, we can retrieve the matches from the views_objects table that has all the properties*/
-             SELECT oiv.view_id, vo.element_id, vo.class, vo.name, vo.content
-             FROM objects_in_view oiv
-             INNER JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version
-             """ % args.prefix
+    sql = """WITH view_relations(view_id, element_id_s, element_id_t) AS (SELECT v.Id as view_id, r.Source as element_id_s, r.Target as element_id_t
+             FROM VIEWS v
+             INNER JOIN CONNECTIONS c on v.Id = c.view_id
+             INNER JOIN RELATIONS r on r.Id = c.relationship_id),
+             view_elements(view_id, element_id) as (SELECT view_id, element_id_s as element_id
+             FROM view_relations
+             UNION ALL
+             SELECT view_id, element_id_t
+             FROM view_relations)
+             SELECT DISTINCT ve.view_id, ve.element_id as Object_id, NULL as Class, NULL as Name, NULL as Content
+             FROM view_elements ve
+             INNER JOIN ELEMENTS e on e.id = ve.element_id"""
     shlog.verbose(sql)
     c_temp.execute(sql)
     rows = c_temp.fetchall()
     viewobjectsTable.insert(con, rows)
-    ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEW_OBJECTS']])
+    ingestTable.insert(con, [[iso_now(),args.dbfile,'VIEW_OBJECTS']])
 
 
 def ingest_connections(args, sqldbfile):
