@@ -292,7 +292,7 @@ def ingest_elements(args, sqldbfile):
                  FROM elements_in_model eim
                  INNER JOIN desired_model dm on dm.version=eim.model_version AND dm.id=eim.model_id)
                  /*With the correct element ids+versions identified, we can retrieve the matches from the elements table that has all the properties*/
-				 SELECT e.id, e.class as Type, e.name, e.documentation, dme.parent_folder_id as ParentFolder
+				 SELECT e.id, e.class as Type, e.name, REPLACE(e.documentation,"'","''"), dme.parent_folder_id as ParentFolder
                  FROM elements e
                  INNER JOIN desired_model_elements dme on dme.element_id=e.id AND dme.element_version=e.version
                  """ % args.prefix
@@ -322,7 +322,7 @@ def ingest_relations(args, sqldbfile):
              /* Hotfix: remove relationship_id not found in views */
 			 WHERE relationship_id in (SELECT DISTINCT relationship_id FROM views_connections))
              /*With the correct relations ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
-             SELECT r.id, r.class as Type, r.name, r.documentation, r.source_id as source, r.target_id as Target
+             SELECT r.id, r.class as Type, r.name, REPLACE(r.documentation,"'","''"), r.source_id as source, r.target_id as Target
              FROM relationships r
              INNER JOIN desired_model_relations dmr on dmr.relationship_id=r.id AND dmr.relationship_version=r.version
              """ % args.prefix
@@ -385,7 +385,7 @@ def ingest_folders(args, sqldbfile):
              JOIN depths ON allfolders.parent_id = depths.id
              ) 
              /*Return contents of the recursive CTE*/
-             SELECT af.id, af.parent_id, af.type, af.Name, af.Documentation, d.depth
+             SELECT af.id, af.parent_id, af.type, af.Name, REPLACE(af.Documentation,"'","''"), d.depth
              FROM allfolders as af
              INNER JOIN depths as d on d.id=af.id
              """ % args.prefix
@@ -410,7 +410,7 @@ def ingest_views(args, sqldbfile):
              FROM views_in_model vim
              INNER JOIN desired_model dm on dm.version=vim.model_version AND dm.id=vim.model_id)
              /*With the correct view ids+versions identified, we can retrieve the matches from the relations table that has all the properties*/
-             SELECT v.id, v.class as Type, v.name, v.documentation, v.viewpoint, dvo.parent_folder_id
+             SELECT v.id, v.class as Type, v.name, REPLACE(v.documentation,"'","''"), v.viewpoint, dvo.parent_folder_id
              FROM views v
              INNER JOIN desired_views dvo on dvo.view_id=v.id AND dvo.view_version=v.version
              """ % args.prefix
@@ -505,7 +505,7 @@ def ingest_enclaves(args, sqldbfile):
     con_temp = sqlite3.connect(args.dbfile)
     c_temp = con_temp.cursor()
     # the ingest_properties query retrieves properties from the archidump database
-    sql = """SELECT DISTINCT e.Id, e.Name, e.Documentation, e1.Name as Location
+    sql = """SELECT DISTINCT e.Id, e.Name, REPLACE(e.Documentation,"'","''"), e1.Name as Location
           /* Get all groupings  from the Enclave FOLDER*/
           FROM FOLDER f
           INNER JOIN ELEMENTS  e on e.ParentFolder = f.Id and e.Type = 'Grouping'
