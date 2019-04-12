@@ -8,7 +8,7 @@ def validate_services_vs_interfaces(args):
                                 FROM VIEWS v
                                 INNER JOIN VIEW_OBJECTS vo on vo.view_id = v.id
                                 INNER JOIN ELEMENTS e on e.ID = vo.Object_id
-                                WHERE e.Type LIKE '%Interface' OR e.Type LIKE '%Service' """
+                                WHERE e.Type LIKE '%Interface'"""
     )
     ViewList.add_report_segment(
         SegmentSQL("""SELECT Name as ViewName, '' as ElementName, '' as ElementType, '' as Documentation
@@ -22,7 +22,7 @@ def validate_services_vs_interfaces(args):
                                            FROM VIEW_OBJECTS vo
                                            INNER JOIN ELEMENTS e on e.ID = vo.Object_id
                                            WHERE vo.view_id = '{View_id}' 
-                                           AND (e.Type LIKE '%Interface' OR e.Type LIKE '%Service' )"""
+                                           AND (e.Type LIKE '%Interface')"""
     )
     SourceObjects.add_report_segment(
         SegmentSQL("""SELECT '{ViewName}' as ViewName, '{ElementName}' as ElementName, '{ElementType}' as ElementType, "{Documentation}" as Documentation  """)

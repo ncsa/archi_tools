@@ -38,7 +38,7 @@ def contact_points_report(args):
                                            AND ec.Enclave_id <> ec1.Enclave_id"""
     )
     SourceObjects.add_report_segment(
-        SegmentSQL("""SELECT ' ' as Blank0, '{SourceName}' AS SourceName, ' ' as Blank1, '{SourceEnclave}' as SourceEnclave, ' ' as Blank2, "{SourceDoc}" as SourceDoc """)
+        SegmentSQL("""SELECT ' ' as Blank0, '{SourceName}' AS SourceName, ' ' as Blank1, '{SourceEnclave}' as SourceEnclave, ' ' as Blank2, '{SourceDoc}' as SourceDoc """)
     )
 
     ViewList.set_substanza(SourceObjects)
@@ -53,7 +53,7 @@ def contact_points_report(args):
                                           WHERE v.id = '{View_id}' AND r.Source = '{SourceObject}'"""
                                   )
     TargetObjects.add_report_segment(
-        SegmentSQL("""SELECT ' ' as Blank1, ' ' as Blank0, '{Name}' as ObjectName, '{TargeetEnclaveName}' as TargeetEnclaveName, '{RelationshipName}' as Relationship, "{TargetDoc}" as TargetDoc """)
+        SegmentSQL("""SELECT ' ' as Blank1, ' ' as Blank0, '{Name}' as ObjectName, '{TargeetEnclaveName}' as TargeetEnclaveName, '{RelationshipName}' as Relationship, '{TargetDoc}' as TargetDoc """)
     )
 
     SourceObjects.set_substanza(TargetObjects)
