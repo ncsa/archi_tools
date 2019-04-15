@@ -150,9 +150,9 @@ viewsTable.check()
 #Record ID's that have been folder from CSV's to distinguich from those created.
 viewobjectsTable = SQLTable()
 viewobjectsTable.tableName = 'VIEW_OBJECTS'
-viewobjectsTable.columns   =['View_id','Object_id','Class', 'Name', 'Content']
-viewobjectsTable.hfm       =[        t,          t,      t,      t,         t]
-viewobjectsTable.hdt       =['text'   ,     'text', 'text', 'text',    'text']
+viewobjectsTable.columns   =['View_id','Object_id','Class', 'Name', 'Content','Container_id']
+viewobjectsTable.hfm       =[        t,          t,      t,      t,         t,             t]
+viewobjectsTable.hdt       =['text'   ,     'text', 'text', 'text',    'text',        'text']
 viewobjectsTable.check()
 
 #Record ID's that have been folder from CSV's to distinguich from those created.
@@ -445,23 +445,27 @@ def ingest_view_objects(args, sqldbfile):
             FROM objects_in_view oiv
             INNER JOIN views_objects vo on vo.container_id=oiv.view_id AND vo.id=oiv.object_id AND vo.version=oiv.object_version),
             /* With root elements now identified, we can loop join view_objects where object_id is the container id */
-            depths(id, version, class, container_id, root_view_id, element_id, name, content) AS (
-            SELECT id, version, class, container_id, container_id as root_view_id, element_id, name, content
+            depths(id, version, class, container_id, root_view_id, element_id, object_id, name, content) AS (
+            SELECT id, version, class, container_id, container_id as root_view_id, element_id, id as object_id, name, content
             FROM null_view_objects 
             
             UNION ALL
             
-            SELECT vo.id, vo.version, vo.class, vo.container_id, depths.root_view_id, vo.element_id, vo.name, vo.content
+            SELECT vo.id, vo.version, vo.class, vo.container_id, depths.root_view_id, vo.element_id, vo.id as object_id, vo.name, vo.content
             FROM views_objects vo
             /* Below is the most important line in the entire query*/
             JOIN depths on vo.container_id = depths.id
-            )
-            /* After this looped JOIN, filter the relevant onjects with the help of  objects_in_view that has proper object=>view relation */
-            SELECT DISTINCT oiv.view_id, depths.element_id as Object_id, depths.class, depths.name, depths.content
+            ),
+            /* After this looped JOIN, filter the relevant objects with the help of  objects_in_view that has proper object=>view relation */
+            desired_objects(view_id, element_id, object_id, class, name, content, container_id) AS (SELECT DISTINCT oiv.view_id, depths.element_id, depths.object_id, depths.class, depths.name, depths.content, depths.container_id
             FROM depths
             INNER JOIN objects_in_view oiv on oiv.object_id = depths.id
             AND oiv.object_version = depths.version
-            AND oiv.view_id = depths.root_view_id
+            AND oiv.view_id = depths.root_view_id)
+			/* container_ids that are enclaves are still using their object_ids intead of element_ids. Time to fix that  */
+			SELECT DISTINCT do.view_id, do.element_id as Object_id, do.class, do.name, do.content, IFNULL(do2.element_id, do.container_id) as container_id
+			FROM desired_objects do
+			LEFT JOIN desired_objects do2 on do.container_id = do2.object_id
              """ % args.prefix
     shlog.verbose(sql)
     c_temp.execute(sql)
