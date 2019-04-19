@@ -2,7 +2,7 @@ from reports import *
 
 def validate_activity_presence(args):
 
-
+    # This validation checks for active aka "round" elements present in Service Realization Viewpoint but not in Behavior to Provisioning Maps
     Elem  = StanzaFactory(args,
                              """WITH AllViewActivity(ElementId, ViewId, Depth) AS (SELECT DISTINCT e.Id as ElementId, v.Id as ViewId, f.Depth
                                 FROM FOLDER f

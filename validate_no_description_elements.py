@@ -2,7 +2,7 @@ from reports import *
 
 def validate_no_description_elements(args):
 
-
+    # This validation find all elements in the tree that do not have a description and lists them in a tree-like fashion
     Folders  = StanzaFactory(args,
                              """SELECT DISTINCT f.ID as FolderID
                                 FROM ELEMENTS e

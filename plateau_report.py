@@ -2,7 +2,7 @@ from reports import *
 
 def plateau_report(args):
 
-
+    # This is a test folder+element demo report that shows off basic functionality
 
     Folders  = StanzaFactory(args,
                              "SELECT distinct Id as FID from folder order by depth asc limit 10"

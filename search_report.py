@@ -2,6 +2,7 @@ from reports import *
 
 def search_report(args):
 
+    # This report folder+element searches by Key
     Search_term = 'Scope:NCOA'
 
 

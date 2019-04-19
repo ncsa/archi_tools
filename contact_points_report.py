@@ -2,7 +2,7 @@ from reports import *
 
 def contact_points_report(args):
 
-
+    # This report find enclave breaches WITHIN all views
     ViewList  = StanzaFactory(args,
                              """SELECT DISTINCT v.id as View_id
                                 /* Get all relations that exist in views */

@@ -2,6 +2,7 @@ from reports import *
 
 def validate_view_elements(args):
 
+    # Find what relations exist in a search path
     # Search_term will be checked for in all folder pathways.
     # that means all matching folders and their subfolders will be checked
     Search_term = 'Service to Provisioning Map Viewpoint'

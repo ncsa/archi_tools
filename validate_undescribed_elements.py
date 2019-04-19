@@ -3,7 +3,7 @@ from reports import *
 def validate_undescribed_elements(args):
 
 
-
+    # FInd what % of all elements are undescribed
     Folders  = StanzaFactory(args,
                              """WITH ViewIDs(ID) AS (SELECT r.Source as ID
                                 FROM RELATIONS r

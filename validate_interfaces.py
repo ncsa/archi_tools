@@ -2,7 +2,7 @@ from reports import *
 
 def validate_services_vs_interfaces(args):
 
-
+    # Find all interfaces
     ViewList  = StanzaFactory(args,
                              """SELECT DISTINCT v.id as View_id
                                 FROM VIEWS v

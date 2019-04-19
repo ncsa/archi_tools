@@ -3,7 +3,7 @@ from reports import *
 def validate_weak_connections(args):
 
 
-
+    # Find the weakest, straight-line connections
     Views  = StanzaFactory(args,
                              """SELECT id as view_id
                                 FROM VIEWS"""

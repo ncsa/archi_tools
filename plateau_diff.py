@@ -2,6 +2,7 @@ from reports import *
 
 def plateau_diff(args):
 
+    # This report diffs two sets of views and checks plateau presence of difference
     # enter table names separated by a semicolon (no spaces)
     FirstTable = 'Data Backbone Application Behavior to Provisioning Map View'
     SecondTable = 'dummy'

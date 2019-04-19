@@ -2,7 +2,7 @@ from reports import *
 
 def validate_srv_data_count(args):
 
-
+    # Find how many times every data object appears in SRVs and where
     AppearancesCount  = StanzaFactory(args,
                              """SELECT DISTINCT COUNT(DISTINCT v.Id) as ViewCount
                                 FROM FOLDER f

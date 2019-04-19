@@ -2,7 +2,7 @@ from reports import *
 
 def validate_find_services(args):
 
-
+    # This validation lists all Services for documentation improvement purposes
     ServiceList  = StanzaFactory(args,
                              """SELECT e.Name, p.Key, e.Documentation
                                 FROM ELEMENTS e

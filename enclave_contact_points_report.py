@@ -2,6 +2,7 @@ from reports import *
 
 def enclave_contact_points_report(args):
 
+    # This report finds elements that belong to multiple enclaves
     SearchTerm ='Service Realization Viewpoint'
 
     ObjectList  = StanzaFactory(args,
