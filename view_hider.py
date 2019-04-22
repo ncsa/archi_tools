@@ -3,6 +3,7 @@ import sqlite3
 import shlog
 import os
 import glob
+from bs4 import BeautifulSoup as bs
 
 def delete_list(args):
     # return a list of html files to nuke
@@ -20,6 +21,23 @@ def delete_list(args):
     view_list = [x[0] for x in rows]
     return view_list
 
+def index_cleaner(args):
+    # delete matching folder class from html
+    shlog.verbose('Parsing ' + args.apache + 'index.html')
+    soup = bs(open(args.apache + 'index.html'), "html.parser")
+
+    spans = soup.findAll('span')
+    shlog.verbose('Found ' + str(spans.__len__()) + ' spans')
+
+    for match in spans:
+        if args.searchterm in match.text:
+            shlog.normal('Deleting ' + str(match))
+            match.decompose()
+
+    shlog.normal('Writing censored html to ' + args.apache + 'index.html')
+    with open(args.apache + 'index.html', "w") as file:
+        file.write(str(soup))
+    return
 
 ###########################################################
 #
@@ -76,7 +94,8 @@ if __name__ == "__main__":
             except Exception as ex:
                 template = "Exception {0} thrown on deletion: {1!r}"
                 shlog.verbose(template.format(type(ex).__name__, ex.args))
-
+        # remove mentions from html
+        index_cleaner(args)
 
 
 
