@@ -4,6 +4,7 @@ import shlog
 import os
 import glob
 from bs4 import BeautifulSoup as bs
+import re
 
 def delete_list(args):
     # return a list of html files to nuke
@@ -23,18 +24,42 @@ def delete_list(args):
 
 def index_cleaner(args):
     # delete matching folder class from html
+    # load the file
     shlog.verbose('Parsing ' + args.apache + 'index.html')
     soup = bs(open(args.apache + 'index.html'), "html.parser")
 
+    # find all spans
     spans = soup.findAll('span')
     shlog.verbose('Found ' + str(spans.__len__()) + ' spans')
 
+    # decompose spans containing any mention of the search term
     for match in spans:
         if args.searchterm in match.text:
             shlog.normal('Deleting ' + str(match))
             match.decompose()
 
     shlog.normal('Writing censored html to ' + args.apache + 'index.html')
+    with open(args.apache + 'index.html', "w") as file:
+        file.write(str(soup))
+    return
+
+def link_wiper(args, views):
+    # delete matching folder class from html
+    # load the file
+    shlog.verbose('Parsing ' + args.apache + 'index.html')
+    soup = bs(open(args.apache + 'index.html'), "html.parser")
+
+    for viewID in views:
+        # find all a's
+        matched_a = soup.find_all('a', href=re.compile(viewID))
+        shlog.verbose('Found ' + str(matched_a.__len__()) + ' as for viwID' + viewID)
+
+        # decompose as containing any mention of the search term
+        for match in matched_a:
+            shlog.verbose('Deleting ' + str(match))
+            match.decompose()
+
+    shlog.normal('Writing html with views removed to ' + args.apache + 'index.html')
     with open(args.apache + 'index.html', "w") as file:
         file.write(str(soup))
     return
@@ -96,6 +121,7 @@ if __name__ == "__main__":
                 shlog.verbose(template.format(type(ex).__name__, ex.args))
         # remove mentions from html
         index_cleaner(args)
+        link_wiper(args, views)
 
 
 
