@@ -52,7 +52,7 @@ def link_wiper(args, views):
     for viewID in views:
         # find all a's
         matched_a = soup.find_all('a', href=re.compile(viewID))
-        shlog.verbose('Found ' + str(matched_a.__len__()) + ' as for viwID' + viewID)
+        shlog.verbose('Found ' + str(matched_a.__len__()) + ' as for viwID ' + viewID)
 
         # decompose as containing any mention of the search term
         for match in matched_a:

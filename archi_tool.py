@@ -22,64 +22,57 @@ import argparse
 import sqlite3
 import shlog
 import csv
-import operator
-import itertools
-import fnmatch
 import tabulate
 import os
 import datetime
 import glob
-import sys
 import uuid
-import shutil
 import archi_interface
 import conventions
+
 
 def t(x):return x
 def i(x):return int(x)
 def r(x):return float(x)
 
+
 class SQLTable:
     def __init__(self):
-        self.columns   = None  #list of Header keywords as if in  line 1 of CSV
-        self.hfn       = None  #List of ascii converter functions eg t, i f)
-        self.hdt       = None  #list of SQL types for each keyword
-        self.tableName = None # name of the SQL table 
+        self.columns   = None  # list of Header keywords as if in line 1 of CSV
+        self.hfn       = None  # List of ascii converter functions eg t, i f)
+        self.hdt       = None  # list of SQL types for each keyword
+        self.tableName = None  # name of the SQL table
 
     def check(self):
-        # Check that the required data items are set up consisentlu
-        #shlog.normal("self.columns: %s" % self.columns)
-        #shlog.normal("self.hfn: %s" % self.hfn)
-        #shlog.normal("self.hdt: %s" % self.hdt)
-        #shlog.normal("self.tableName %s" % self.tableName)
+        # Check that the required data items are set up consistently
         assert len(self.columns) == len(self.hfm)
-        assert len(self.columns) == len(self.hdt) # Bail if we have made typoss
+        assert len(self.columns) == len(self.hdt)  # Bail if we have made typos
         assert self.tableName
         
     def mkTable (self, con):
-        #make the schemas for the main database tables
+        # make the schemas for the main database tables
         # the schema can be loaded with data from subsequent calls of this program.
         cur = con.cursor()
-        columns = ["%s %s" % (name, dbtype) for (name, dbtype) in zip (self.columns, self.hdt)]
+        columns = ["%s %s" % (name, dbtype) for (name, dbtype) in zip(self.columns, self.hdt)]
         columns = (',').join(columns)
-        create_statement = "create table "+ self.tableName + " (" + columns + ')'
+        create_statement = "create table " + self.tableName + " (" + columns + ')'
         shlog.normal (create_statement)
         cur.execute(create_statement)
         con.commit()
         return
 
     def insert(self, con, rows):
-        #insert rows of Ascii into the databse table
-        #after applying conversion funcitons.
+        # insert rows of Ascii into the database table
+        # after applying conversion functions.
         insert_statement = (',').join(["?" for name in self.columns])
         insert_statement = "insert into " + self.tableName + "  values (" + insert_statement + ")"
-        shlog.verbose (insert_statement)
+        shlog.verbose(insert_statement)
         cur = con.cursor()
-        for row in  rows:
+        for row in rows:
             shlog.debug(row)
-            #apply convertion functins
-            r= ([f(item) for (item, f) in zip(row, self.hfm)])
-            cur.execute(insert_statement, r ) 
+            # apply convention functions
+            r = ([f(item) for (item, f) in zip(row, self.hfm)])
+            cur.execute(insert_statement, r)
         con.commit()
 
 
@@ -107,23 +100,15 @@ propertiesTable.hfm       =[     t,     t,     t ]
 propertiesTable.hdt       =['text','text', 'text']
 propertiesTable.check()
 
-#record ingests
+# record ingests
 ingestTable = SQLTable()
 ingestTable.tableName = 'INGESTS'
 ingestTable.columns   =['Time','File','IngestType']
 ingestTable.hfm       =[     t,    t,            t]
-ingestTable.hdt       =['text', 'text',      'text']
+ingestTable.hdt       =['text', 'text',     'text']
 ingestTable.check()
 
-#Record ID's that have been ingested from CSV's to distinguich from those created.
-ingestedTable = SQLTable()
-ingestedTable.tableName = 'INGESTED'
-ingestedTable.columns   =['Number','Type','Description']
-ingestedTable.hfm       =[        t,     t,           t]
-ingestedTable.hdt       =[   'text','text',      'text']
-ingestedTable.check()
-
-#Record ID's that have been folder from CSV's to distinguich from those created.
+# record folder
 folderTable = SQLTable()
 folderTable.tableName = 'FOLDER'
 folderTable.columns   =['Id'  ,'Parent_id'  ,'Type','Name','Documentation','Depth']
@@ -131,15 +116,7 @@ folderTable.hfm       =[     t,            t,     t,     t,              t,     
 folderTable.hdt       =['text',       'text','text','text',         'text', 'text']
 folderTable.check()
 
-#Record ID's that have been dual from CSV's to distinguich from those created.
-dualTable = SQLTable()
-dualTable.tableName = 'DUAL'
-dualTable.columns   =['Dummy']
-dualTable.hfm       =[     t ]
-dualTable.hdt       =['text']
-dualTable.check()
-
-#Record ID's that have been folder from CSV's to distinguich from those created.
+# record views
 viewsTable = SQLTable()
 viewsTable.tableName = 'VIEWS'
 viewsTable.columns   =['Id'  ,'Type'  ,'Name','Documentation','Viewpoint','Parent_folder_id']
@@ -147,7 +124,7 @@ viewsTable.hfm       =[     t,       t,     t,              t,          t,      
 viewsTable.hdt       =['text',  'text','text',         'text',     'text',            'text']
 viewsTable.check()
 
-#Record ID's that have been folder from CSV's to distinguich from those created.
+# record view objects
 viewobjectsTable = SQLTable()
 viewobjectsTable.tableName = 'VIEW_OBJECTS'
 viewobjectsTable.columns   =['View_id','Object_id','Class', 'Name', 'Content','Container_id']
@@ -155,7 +132,7 @@ viewobjectsTable.hfm       =[        t,          t,      t,      t,         t,  
 viewobjectsTable.hdt       =['text'   ,     'text', 'text', 'text',    'text',        'text']
 viewobjectsTable.check()
 
-#Record ID's that have been folder from CSV's to distinguich from those created.
+# record connections
 connectionsTable = SQLTable()
 connectionsTable.tableName = 'CONNECTIONS'
 connectionsTable.columns   =['connection_id','view_id','relationship_id']
@@ -163,7 +140,7 @@ connectionsTable.hfm       =[              t,         t,               t]
 connectionsTable.hdt       =['text'         ,    'text',          'text']
 connectionsTable.check()
 
-# this is the Enclave tbale
+# record enclaves
 enclaveTable = SQLTable()
 enclaveTable.tableName = 'ENCLAVES'
 enclaveTable.columns   =['Id'  ,'Name','Documentation', 'Location']
@@ -171,7 +148,7 @@ enclaveTable.hfm       =[     t,     t,              t,          t]
 enclaveTable.hdt       =['text','text',         'text',     'text']
 enclaveTable.check()
 
-# this is the ENclave relationship assistant table
+# record objects identified as enclave members
 enclavecontentTable = SQLTable()
 enclavecontentTable.tableName = 'ENCLAVE_CONTENT'
 enclavecontentTable.columns   =['Object_id','Enclave_id']
@@ -180,9 +157,8 @@ enclavecontentTable.hdt       =['text'     ,       'text']
 enclavecontentTable.check()
 
 
-
 def q(args, sql):
-    #a funnel routned for report queries, main benefit is query printing
+    # a funnel routned for report queries, main benefit is query printing
     con = sqlite3.connect(args.dbfile)
     con.text_factory = lambda x: x.decode("utf-8")
     cur = con.cursor()
@@ -192,26 +168,24 @@ def q(args, sql):
     return result
 
 
-
-###################################################################
+##################################################################
 #
-#  functions for time calculations -- SQLLITES can use ISO Datas
+#  functions for time calculations -- SQLLITES can use ISO Dates
 #
 ##################################################################
 
 
 def iso_datetime(day,hour,offset_from_central_time=0):
-    #convert mm/dd/yyyy to YYYY-MM-DD HH:MM:00.000
-    dayhour =  day + ","  + hour
+    # convert mm/dd/yyyy to YYYY-MM-DD HH:MM:00.000
+    dayhour =  day + "," + hour
     shlog.debug(dayhour)
-    #t = datetime.datetime.strptime(dayhour,"%m/%d/%Y,%I:%M %p %Z")
     t = datetime.datetime.strptime(dayhour,"%m/%d/%Y,%I:%M %p") + datetime.timedelta(hours = offset_from_central_time) 
     iso_datetime = datetime.datetime.isoformat(t)
     shlog.debug(iso_datetime)
     return iso_datetime
 
 def iso_range(deltaDays, isoLatestDateTime=datetime.datetime.isoformat(datetime.datetime.now())):
-    #return (latest, earliest) ISO date range. Latest data defaults to current time
+    # return (latest, earliest) ISO date range. Latest data defaults to current time
     isoLatestDateTime = isoLatestDateTime.split('.')[0]
     t = datetime.datetime.strptime(isoLatestDateTime,"%Y-%m-%dT%H:%M:%S") + datetime.timedelta(days = -deltaDays)
     isoEarliestdatetime = datetime.datetime.isoformat(t)
@@ -222,20 +196,19 @@ def iso_now():
     return datetime.datetime.isoformat(datetime.datetime.now())
 
 
-
 ###################################################################
 #
-#  functions to make database state,  make tables, and ingest, DB info.
+#  functions to make database state, make tables, and ingest, DB info.
 #
 ##################################################################
 
-def mkdb (args):
+def mkdb(args):
     """Provide an empty database loaded with all schema""" 
-    #make the schemas for the main database tables
+    # make the schemas for the main database tables
     # the schema can be loaded with data from subsequent calls of this program.
     try:
         os.remove(args.dbfile)
-        shlog.normal ("removed old database : %s" ,args.dbfile)
+        shlog.normal("removed old database : %s", args.dbfile)
     except:
         pass
     con = sqlite3.connect(args.dbfile)
@@ -244,16 +217,15 @@ def mkdb (args):
     relationsTable.mkTable(con)
     propertiesTable.mkTable(con)
     ingestTable.mkTable(con)
-    ingestedTable.mkTable(con)
     folderTable.mkTable(con)
     viewsTable.mkTable(con)
     viewobjectsTable.mkTable(con)
     connectionsTable.mkTable(con)
     enclaveTable.mkTable(con)
     enclavecontentTable.mkTable(con)
-    dualTable.mkTable(con)
-    q(args,"insert into dual values ('X')")
+    q(args, "insert into dual values ('X')")
     return
+
 
 def ingest(args):
     """ Ingest items in the CVS_vault into databse tables """
@@ -270,15 +242,13 @@ def ingest(args):
         ingest_connections(args, v)
         ingest_enclaves(args, v)
         ingest_enclave_content(args, v)
-        # else:
-        #     shlog.error ("Cannot identify type of %s" % v)
-        #     exit(1)
             
-    #make tables from other modules
-    conventions.mkTables(args)  #modeling conventions
-        
+    # make tables from other modules
+    conventions.mkTables(args)  # modeling conventions
+
+
 def ingest_elements(args, sqldbfile):
-        shlog.normal ("about to open %s",sqldbfile)
+        shlog.normal("about to open %s",sqldbfile)
         con = sqlite3.connect(args.dbfile)
         con_temp = sqlite3.connect(sqldbfile)
         c_temp = con_temp.cursor()
@@ -299,14 +269,13 @@ def ingest_elements(args, sqldbfile):
         shlog.verbose(sql)
         c_temp.execute(sql)
         rows = c_temp.fetchall()
-
         elementsTable.insert(con, rows)
         ingestTable.insert(con, [[iso_now(),sqldbfile,'ELEMENTS']])
         con_temp.close()
                 
     
 def ingest_relations(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -334,7 +303,7 @@ def ingest_relations(args, sqldbfile):
 
                  
 def ingest_properties(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -354,8 +323,9 @@ def ingest_properties(args, sqldbfile):
     propertiesTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'PROPERTIES']])
 
+
 def ingest_folders(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -395,8 +365,9 @@ def ingest_folders(args, sqldbfile):
     folderTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'FOLDER']])
 
+
 def ingest_views(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -420,8 +391,9 @@ def ingest_views(args, sqldbfile):
     viewsTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),sqldbfile,'VIEWS']])
 
+
 def ingest_view_objects(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -475,7 +447,7 @@ def ingest_view_objects(args, sqldbfile):
 
 
 def ingest_connections(args, sqldbfile):
-    shlog.normal ("about to open %s",sqldbfile)
+    shlog.normal("about to open %s",sqldbfile)
     con = sqlite3.connect(args.dbfile)
     con_temp = sqlite3.connect(sqldbfile)
     c_temp = con_temp.cursor()
@@ -503,7 +475,7 @@ def ingest_connections(args, sqldbfile):
 
 
 def ingest_enclaves(args, sqldbfile):
-    shlog.normal ("about to open %s",args.dbfile)
+    shlog.normal("about to open %s",args.dbfile)
     con = sqlite3.connect(args.dbfile)
     # note: ingest_enclaves connects to the same DB for source and output data
     con_temp = sqlite3.connect(args.dbfile)
@@ -525,7 +497,7 @@ def ingest_enclaves(args, sqldbfile):
 
 
 def ingest_enclave_content(args, sqldbfile):
-    shlog.normal ("about to open %s",args.dbfile)
+    shlog.normal("about to open %s",args.dbfile)
     con = sqlite3.connect(args.dbfile)
     # note: ingest_enclave_content connects to the same DB for source and output data
     con_temp = sqlite3.connect(args.dbfile)
@@ -548,7 +520,7 @@ def ingest_enclave_content(args, sqldbfile):
 
 def dbinfo(args):
     """Print summary information about database content"""
-    shlog.normal ("about to open %s",args.dbfile)
+    shlog.normal("about to open %s",args.dbfile)
     l = []
     sqls = [
         ["Number of Elements"  ,"Select count(*) from ELEMENTS"],
@@ -556,17 +528,16 @@ def dbinfo(args):
         ["Number of Properties","Select count(*) from PROPERTIES"],
         ]
     for item, sql in sqls:
-        l.append ([item,   q(args, sql).fetchone()[0]])
+        l.append([item,   q(args, sql).fetchone()[0]])
 
     # now ingest infor from CSV's
     sql = "Select * from INGESTS"
     for result in q(args, sql):
         l.append(["sqlite",result])
-
     print (tabulate.tabulate(l,["Item","Value"]))
 
 def list(args):
-    """ """
+    """get ELEMENTS content"""
     con = sqlite3.connect(args.dbfile)
     cur = con.cursor()
     q = "select * from ELEMENTS"
@@ -631,7 +602,7 @@ def extend(args):
 
 def header(args):
       """make a csv file with Just a header"""
-      #import pdb; pdb.set_trace()
+      # import pdb; pdb.set_trace()
       types = ["elements", "properties","relations"]
       if args.csvtype not in types :
             shlog.error("%s is not one of %s" % (args.csvtype, types))
@@ -651,12 +622,12 @@ def header(args):
 #
 # Main program
 #
-############################################################
+###########################################################
       
             
 if __name__ == "__main__":
 
-    #main_parser = argparse.ArgumentParser(add_help=False)
+    # main_parser = argparse.ArgumentParser(add_help=False)
     main_parser = argparse.ArgumentParser(
      description=__doc__,
      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -666,17 +637,17 @@ if __name__ == "__main__":
     
     main_parser.add_argument("--dbfile", "-d", default="archi_tool.db")
     main_parser.add_argument("--prefix", "-p", default="LSST_")
-    main_parser.set_defaults(func=None) #if none then there are  subfunctions    
+    main_parser.set_defaults(func=None) # if none then there are  subfunctions
     subparsers = main_parser.add_subparsers(title="subcommands",
                        description='valid subcommands',
                        help='additional help')
-    #Subcommand  to ingest csv to sqlite3 db file 
+    # Subcommand  to ingest csv to sqlite3 db file
     mkdb_parser = subparsers.add_parser('mkdb', description=mkdb.__doc__)
     mkdb_parser.set_defaults(func=mkdb)
     mkdb_parser.add_argument("--force", "-f", help="remove existing db file of the same name", default=False, action='store_true')
 
     
-    #Subcommand  to ingest csv to sqlite3 db file 
+    # Subcommand  to ingest csv to sqlite3 db file
     ingest_parser = subparsers.add_parser('ingest', description=ingest.__doc__)
     ingest_parser.set_defaults(func=ingest)
     #ingest_parser.add_argument("sqldbfile")
@@ -697,18 +668,6 @@ if __name__ == "__main__":
     like_parser = subparsers.add_parser('like', description=like.__doc__)
     like_parser.set_defaults(func=like)
     like_parser.add_argument("pattern", help="SQL pattern for matching")
-
-    #Subcommand  to extend a archimate-style CSV export file 
-    # extend_parser = subparsers.add_parser('extend', description=extend.__doc__)
-    # extend_parser.set_defaults(func=extend)
-    # extend_parser.add_argument("csv", help="csv to append to")
-    #extend_parser.add_argument("prototype", help="command list that is a protytype.  Use UUID for a new UUID")
-    #extend_parser.add_argument("--nappends", "-n", help='Number of lines to append tofile ' , type=int, default=15)
-
-    #Subcommand  make an archmate style empty (header only) CSV file
-    # header_parser = subparsers.add_parser('header', description=header.__doc__)
-    # header_parser.set_defaults(func=header)
-    # header_parser.add_argument("csvtype", help="type of sqldbfile to make")
 
     archi_interface.parsers(subparsers)
     conventions.parsers(subparsers)
