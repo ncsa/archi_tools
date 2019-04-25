@@ -223,7 +223,6 @@ def mkdb(args):
     connectionsTable.mkTable(con)
     enclaveTable.mkTable(con)
     enclavecontentTable.mkTable(con)
-    q(args, "insert into dual values ('X')")
     return
 
 
