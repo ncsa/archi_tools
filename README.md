@@ -30,6 +30,7 @@ However, the following packages must be installed for proper operation of the to
 * xlsxwriter
 * openpyxl
 * lxml
+* bs4
 
 At the current level of development, the archi_tool software is
 run from the directory holding the software.  Archi_tool software
@@ -98,6 +99,31 @@ $ ./reports.py -p DEMAND report plateau_report.py
 A stanza defines a line in a report. A stanzaFactory is an object that creates many stanzas base on SQL queries. Three types of SQL queries define a stanza.  All of these queries relate to a single subject.  A line about a particular subject may optionally be followed by a substanza where each line contains information about a different sort of subject.
 
 The idea directories and files is an intuitive example that illustrates the concept. The tool can generate a report about each folder in a directory tree.  Each Stanza of the report would contain a line about some particular directory, after that lines, there would be additional lines about the files in each folder.  The high-level stanzas are about the subject of *folders*, each report line about a folder contains a report line about a *file* in a directory.
+
+#### Stanza System Explained
+
+This example aims to describe the outputs of a possible report. Many more reports of various complexity are possible; however, this one aims to cover most of the possible outputs of a typical report.
+
+<img src="https://i.imgur.com/DiAJ3Ki.png" width="30%">
+
+The general areas of the report can be outlined as such:
+* Blue area is the output of StanzaFactory queries. It is not rendered to the excel sheet; however, it can be referenced by other queries by encasing its column names in curly brackets: {}
+* Red is the output of non-contexted StanzaFactory report segments. It is rendered to the excel sheet.
+* Green is the output of contexted StanzaFactory report segments. It is rendered to the excel sheet.
+
+More specifically, the output can be broken down as such:
+
+* A is the output of the StanzaFactory #1 query. It is not rendered to the excel sheet; however, it can be referenced by other queries by encasing its column names in curly brackets: {}. Typically, reports only need one column; however, more are supported.
+* B1, B2, and B3 are the row content returned by StanzaFactory #1 report segment.
+* C is the output of the StanzaFactory #2 (a substanza of StanzaFactory #1) query. It is not rendered to the excel sheet; however, it can be referenced by other queries by encasing its column names in curly brackets: {}. Typically, reports only need one column; however, more are supported.
+* D1, D2, and D3 are the row content returned by StanzaFactory #2 report segment.
+* E1, E2, and E3 are the output of the context query of the contexted report segment of StanzaFactory #1. These values will be collected only for the [investigate]
+* F1, F2, and F3 are the row content returned by the contexted report segment of StanzaFactory #1
+* G1, G2, and G3 are the row content of the contexted report segment of StanzaFactory #2 (a substanza of StanzaFactory #1).
+* X1, X2, and X3 are column names of the query that had returned B1, B2, and B3. Only the very first report segment that is generated will have its column names harvested.
+
+
+
 
 ###  Example report
 
