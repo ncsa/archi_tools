@@ -3,11 +3,9 @@ from __future__ import print_function
 import shlog
 import argparse
 import sqlite3
-import collections
 import db
 
 #  do not worry yet about rows that are composite.
-
 
 
 def q(args, sql):
@@ -17,6 +15,7 @@ def q(args, sql):
     result  = cur.execute (sql)
     con.commit()
     return result
+
 
 def qtranspose(args, sql):
     shlog.verbose(sql)
@@ -28,16 +27,17 @@ def qtranspose(args, sql):
         results.append(result)
     return zip(*results)
 
+
 def qd(args, sql, passed_stanza):
-    #return results of query as a list of dictionaries,
-    #one for each row.
+    # return results of query as a list of dictionaries,
+    # one for each row.
     con = sqlite3.connect(args.dbfile)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     shlog.verbose(sql)
     results = cur.execute (sql)
     shlog.debug(results)
-    # header colelction handling
+    # header collection handling
     # 0th call to qd() is from contexts
     # the one that follows it directly is the one we can snatch column names from
     if passed_stanza.left_column_collections == 1:
@@ -49,6 +49,7 @@ def qd(args, sql, passed_stanza):
             pass
     return results
 
+
 class Workspace:
     """ Provde an in-memory workslae that can be rendered into excel, etc..."""
     def __init__(self, args):
@@ -57,59 +58,63 @@ class Workspace:
         self.col = 0
         self.col_max = 0
         self.args = args
-        #self.content = collections.defaultdict(lambda x : "Empty")
         self.content={}
         self.args=args
         # header value that will be passed by stanza for integration into excel object
         self.header = []
+
     def next_row(self):
         self.row = self.row+1
-        #self.content[self.row] = collections.defaultdict(lambda x : "Empty")
         self.content[self.row] = {}
         self.col = 1
+
     def max_chars(self, colno):
-        #return the max characters in any cell within a column, 0 for empty column 
+        # return the max characters in any cell within a column, 0 for empty column
         max_chars = 0
         for rowno in range(self.row):
             if rowno in self.content.keys() and colno in self.content[rowno].keys():
-                #use python string as a proxy for numeric columns.
+                # use python string as a proxy for numeric columns.
                 max_chars = max(max_chars,len("%s" % self.content[rowno][colno]))
             # special header handling
-            # if rowno is 0, that means we are looking at the header row
-            # due to the way content vs header are implemented, self.header is offset by 1 compared to colno
+            # if rowno is 0, that means we are looking at the first passed header row
+            # due to the way content vs header are implemented, self.header is offset by 1 unlike colno
             # for example, B2 value (colno 1 rowno 0) is located in self.header[0]. hence, colno-1 is implemented
             if rowno == 0 and colno > 0:
                 try:
                     max_chars = max(max_chars, len("%s" % self.header[colno-1]))
                 except:
-                #     # if an exception is thrown, it's most likely the IndexError: list index out of range
-                #     # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
+                    # if an exception is thrown, it's most likely the IndexError: list index out of range
+                    # meaning there's multiple (sub)stanzas with eneven number of contexts. ignore and move on
                     pass
         shlog.debug("XXX %s %s" %  (colno, max_chars*2)) 
         return max_chars
+
     def add_element(self, content_element):
-        #add populate the curent celle on the current row.
+        # add populate the curent celle on the current row.
         self.content[self.row][self.col] = content_element
         shlog.verbose("content: (%s,%s):%s" % (self.row, self.col, self.content[self.row][self.col]))
         self.col_max = max(self.col_max, self.col)
         self.col += 1
+
     def catenate_workspace(self, workspace_to_catenate):
         for n in range(1, workspace_to_catenate.row):
-            self.row +=1
+            self.row += 1
             shlog.verbose("catenting row %s" % self.row)
             columns_from_other = workspace_to_catenate.content[n]
             self.content[self.row] = columns_from_other
             self.col_max = max(self.col_max,workspace_to_catenate.col_max)
+
     def dump(self):
-        #provide a crude dump of the workspace
+        # provide a crude dump of the workspace
         for r in range(1,self.row):print (self.content[r])
+
     def excel(self):
-        #write the output to an excel file.  @ optionally pop up execl to see ot
+        # write the output to an excel file.  @ optionally pop up execl to see ot
         import xlsxwriter
         import os
         workbook = xlsxwriter.Workbook(self.args.excelfile)
         worksheet = workbook.add_worksheet()
-        #have to say bold to work to make wrap to work, hmm
+        # have to say bold to work to make wrap to work, hmm
         x = workbook.add_format({"text_wrap" : True,  "bold" : True })
         # write header
         for h in range(0, len(self.header)):
@@ -139,6 +144,7 @@ class Header:
     def report (self, _dummy):
         pass
 
+
 class Padr:
     def __init__(self, args, ncells):
         self.args = args
@@ -147,17 +153,16 @@ class Padr:
         pass
 
 
-        
 class QueryContext:
-    # a query contest is an array of dicitionary that provides
-    # addional informaition to a query.  The keys in teh dictionary
+    # a query contest is an array of dictionary that provides
+    # additional information to a query.  The keys in the dictionary
     # are teh names in the select statement
     # e.g Deleac a, b...dog from,,,,   a and dog would be keys
     # a distinct dictionary is made for every line returned.
     # the primary internal data structure is a list of these
     # dictionaries.
     #
-    # All of this supports a stanxa repeating itsels on a row,
+    # All of this supports a stanza repeating itself on a row,
     # Each time using a line from the SQL query to generate new
     # outputs.
     #
@@ -165,7 +170,7 @@ class QueryContext:
 
     def __init__(self, args, sql):
         self.context_list = []
-        if sql== None:  #shim to support no context... Fix afer getting the chain to work.
+        if sql== None:  # shim to support no context... Fix afer getting the chain to work.
             self.context_list= [{}]
             return
         con = sqlite3.connect(args.dbfile)
@@ -180,12 +185,14 @@ class QueryContext:
                  d[key] = item
             self.context_list.append(d)
         shlog.verbose("new query context: %s", self.context_list)
-    
+
+
 class SegmentSQL:
         def __init__(self, segment_sql, one_to_one=True, context=QueryContext(None,None)):
             self.segment_sql = segment_sql
             self.one_to_one = one_to_one
             self.context = context  # an object
+
 
 class StanzaFactory:
    # recipe for 0...n terminal rows
@@ -210,7 +217,6 @@ class StanzaFactory:
         self.left_columns_collector = []
         self.left_column_collections = 0
 
-
     def add_report_segment(self, segment_sql):
         self.report_segments.append(segment_sql)
 
@@ -218,7 +224,7 @@ class StanzaFactory:
         self.substanza = substanza
         
     def report(self, element_sql_params):
-        #Outer loop -- this query givee query paremater to ideniify the subject of a row
+        # Outer loop -- this query givee query paremater to ideniify the subject of a row
         # pass arguments, sql and the stanza itself so the header can be passed on
         for row_query_sql_params in qd(self.args, self.element_sql.format(**element_sql_params), self) :
             self.workspace.next_row()
@@ -242,7 +248,7 @@ class StanzaFactory:
                         self.generate_one_to_one_segment(row_query_sql)
                     else:
                         self.generate_one_to_many_segment(row_query_sql)
-                    #done bulding this row, now build any substanza
+                    # done bulding this row, now build any substanza
             if self.substanza:
                 self.substanza.workspace = self.workspace
                 self.substanza.report(row_query_sql_params)
@@ -252,8 +258,8 @@ class StanzaFactory:
         # left_column_collections adds one one every pass. qd() will snatch the columns from sql on the second calling
         # from generate_one_to_one_segment
         self.left_column_collections += 1
-        #perform query and then populate successive cells in the
-        #workspace row with the result
+        # perform query and then populate successive cells in the
+        # workspace row with the result
         # pass arguments, sql command and the stanza itself so we can retrieve static column names
         segment_result = qd(self.args, segment_sql, self).fetchone()
         if segment_result:
@@ -267,16 +273,16 @@ class StanzaFactory:
                 self.workspace.add_element("")
             
     def generate_one_to_many_segment(self,segment_sql):
-        #perform query and then catenate the list of results
-        #insert into rightmost cell of the workspace
+        # perform query and then catenate the list of results
+        # insert into rightmost cell of the workspace
         answer = []
         segment_result = q(self.args, segment_sql).fetchall()
         for result in segment_result:
-            #make a string from each returned row.
+            # make a string from each returned row.
             s = ' '.join(result)  
             answer.append(s)
-        #separate the data from each row wiht a delimiter
-        #put data in the next column of the row.
+        # separate the data from each row wiht a delimiter
+        # put data in the next column of the row.
         delimiter = ':::'
         delimiter = '\n'
         self.workspace.add_element(delimiter.join(answer))
@@ -284,7 +290,6 @@ class StanzaFactory:
 
 if __name__ == "__main__":
 
-    #main_parser = argparse.ArgumentParser(add_help=False)
     main_parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -293,13 +298,13 @@ if __name__ == "__main__":
                              default="NORMAL")
     
     main_parser.add_argument("--dbfile", "-d", default="LSST_archi_tool.db")
-    main_parser.set_defaults(func=None) #if none then there are  subfunctions    
+    main_parser.set_defaults(func=None) # if none then there are  subfunctions
     subparsers = main_parser.add_subparsers(title="subcommands",
                        description='valid subcommands',
                        help='additional help')
     
 
-    #Subcommand  to  make a report 
+    # Subcommand to make a report
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument("--show" , "-s", help="show result in excel", default=False, action='store_true')
     report_parser.add_argument("--closeexcel", "-ce", action='store_true',
@@ -320,7 +325,7 @@ if __name__ == "__main__":
     shlog.basicConfig(level=shlog.__dict__[args.loglevel])
     shlog.normal("Database is %s" % args.dbfile)
     if ".py" in args.module:
-        shlog.error("Module names do not contain the >py suffix")
+        shlog.error("Module names do not contain the .py suffix")
         exit(1)
     if not args.function: args.function = args.module 
     if not args.excelfile: args.excelfile = args.module + ".xlsx" 
