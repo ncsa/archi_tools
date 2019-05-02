@@ -4,6 +4,7 @@ import shlog
 import argparse
 import sqlite3
 import db
+import sys
 
 #  do not worry yet about rows that are composite.
 
@@ -330,6 +331,13 @@ if __name__ == "__main__":
     if not args.function: args.function = args.module 
     if not args.excelfile: args.excelfile = args.module + ".xlsx" 
 
+    # add report/validate folders to PATH
+    sys.path.insert(0, './validate/')
+    sys.path.insert(0, './report/')
+    # remove the actual path from args
+    args.module = args.module.replace('validate/','').replace('report/','')
+    args.function = args.function.replace('validate/','').replace('report/','')
+    print(args.module)
     module = __import__(args.module)
     if args.function not in module.__dict__.keys():
         shlog.error("%s is not a function within module %s" % (args.function, args.module))
