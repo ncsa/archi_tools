@@ -32,5 +32,4 @@ def validate_no_description_elements(args):
     Folders.set_substanza (Elements)
 
 
-    # Folders.report({})
     return Folders

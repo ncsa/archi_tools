@@ -73,5 +73,4 @@ def plateau_diff(args):
     )
 
 
-    # Folders.report({})
     return Uniques

@@ -60,5 +60,4 @@ def contact_points_report(args):
 
 
 
-    # ViewList.report({})
     return ViewList

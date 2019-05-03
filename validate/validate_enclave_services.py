@@ -31,5 +31,4 @@ def validate_enclave_services(args):
 
 
 
-    # Enclaves.report({})
     return Enclaves

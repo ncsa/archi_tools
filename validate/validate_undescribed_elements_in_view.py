@@ -31,5 +31,4 @@ def validate_undescribed_elements(args):
 
     Views.set_substanza(Connections)
 
-    # Views.report({})
     return Views

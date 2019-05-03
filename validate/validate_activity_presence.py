@@ -27,5 +27,4 @@ def validate_activity_presence(args):
 
 
 
-    # Elem.report({})
     return Elem

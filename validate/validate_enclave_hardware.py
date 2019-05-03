@@ -30,5 +30,4 @@ def validate_enclave_hardware(args):
 
 
 
-    # Enclaves.report({})
     return Enclaves

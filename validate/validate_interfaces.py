@@ -32,5 +32,4 @@ def validate_services_vs_interfaces(args):
 
 
 
-    # ViewList.report({})
     return ViewList

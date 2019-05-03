@@ -42,5 +42,4 @@ def search_report(args):
     Folders.set_substanza (Elements)
 
 
-    # Folders.report({})
     return Folders

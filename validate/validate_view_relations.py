@@ -25,5 +25,4 @@ def validate_view_elements(args):
 
 
 
-    # Folders.report({})
     return Folders

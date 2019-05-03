@@ -47,5 +47,4 @@ def validate_undescribed_elements(args):
 
 
 
-    # Folders.report({})
     return Folders

@@ -17,5 +17,4 @@ def validate_find_services(args):
 
 
 
-    # ServiceList.report({})
     return ServiceList

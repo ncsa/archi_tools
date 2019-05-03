@@ -31,5 +31,4 @@ def validate_weak_connections(args):
 
     Views.set_substanza(Connections)
 
-    # Views.report({})
     return Views

@@ -69,5 +69,4 @@ def enclave_contact_points_report(args):
     ViewsOfInterest.set_substanza(Connections)
 
 
-    # ObjectList.report({})
     return ObjectList

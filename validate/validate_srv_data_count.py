@@ -61,5 +61,4 @@ def validate_srv_data_count(args):
 
 
 
-    # AppearancesCount.report({})
     return AppearancesCount

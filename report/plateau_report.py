@@ -36,5 +36,4 @@ def plateau_report(args):
     Folders.set_substanza (Elements)
 
 
-    # Folders.report({}) #2
     return Folders #3
