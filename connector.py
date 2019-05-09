@@ -2,14 +2,25 @@ import sqlite3
 import shlog
 import networkx as nx
 
+
 def get_connections(args):
     # return a list of html files to nuke
     shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
-    # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT DISTINCT Source, Target
-             FROM RELATIONS"""
+    # this query returns all connections that have their paths matched with args.searchterm
+    if args.search_term is None:
+        # get all relations if no search_term flag had been passed
+        sql = """SELECT DISTINCT Source, Target
+                 FROM RELATIONS"""
+    else:
+        # else, put it to good use
+        sql = """SELECT Source, Target
+                 FROM VIEWS v
+                 INNER JOIN FOLDER f on f.id = v.Parent_folder_id
+                 INNER JOIN CONNECTIONS c on c.view_id = v.id
+                 INNER JOIN RELATIONS r on r.Id = c.relationship_id
+                 WHERE f.Depth LIKE '%F1LL3R%'""".replace('F1LL3R', str(args.search_term))
     shlog.verbose(sql)
     curs.execute(sql)
     connection_list = curs.fetchall()
@@ -70,6 +81,25 @@ def link_all(args, start, end):
 
     # get connection between two shortest
     return [p for p in nx.all_simple_paths(g, start, end)]
+
+def get_elem_name(args, elem):
+    # make a sql request o get element name though it's ID
+    # shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    # this query returns all views that have their paths matched with args.searchterm
+    sql = """SELECT Name
+             FROM ELEMENTS
+             WHERE ID = 'F1LL3R'""".replace('F1LL3R', elem)
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        elem_name = rows[0][0]
+    except IndexError:
+        return ''
+    return elem_name
 
 ###########################################################
 #
