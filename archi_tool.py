@@ -156,6 +156,14 @@ enclavecontentTable.hfm       =[          t,            t]
 enclavecontentTable.hdt       =['text'     ,       'text']
 enclavecontentTable.check()
 
+# create a table to keep era records
+eraTable = SQLTable()
+eraTable.tableName = 'ERAS'
+eraTable.columns   =['EraID','Name','Start','Finish','Fires']
+eraTable.hfm       =[      t,     t,      t,       t,      t]
+eraTable.hdt       =['text' ,'text', 'text',  'text', 'text']
+eraTable.check()
+
 
 def q(args, sql):
     # a funnel routned for report queries, main benefit is query printing
@@ -223,11 +231,12 @@ def mkdb(args):
     connectionsTable.mkTable(con)
     enclaveTable.mkTable(con)
     enclavecontentTable.mkTable(con)
+    eraTable.mkTable(con)
     return
 
 
 def ingest(args):
-    """ Ingest items in the CVS_vault into databse tables """
+    """ Ingest items in the cache into databse tables """
     vault_files = os.path.join(archi_interface.cachepath(args), "*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):
@@ -244,6 +253,14 @@ def ingest(args):
             
     # make tables from other modules
     conventions.mkTables(args)  # modeling conventions
+
+def era_ingest(args):
+    """ Ingest eras from the supplied path
+        unlike ingest, this uses the prefix, such as LSST """
+    vault_files = os.path.join(archi_interface.cachepath(args), args.prefix + "_*.csv")
+    shlog.normal("looking into vault for %s", vault_files)
+    for v in glob.glob(vault_files):
+        ingest_era_content(args, v)
 
 
 def ingest_elements(args, sqldbfile):
@@ -510,6 +527,17 @@ def ingest_enclave_content(args, sqldbfile):
     rows = c_temp.fetchall()
     enclavecontentTable.insert(con, rows)
     ingestTable.insert(con, [[iso_now(),args.dbfile,'ENCLAVE_CONTENT']])
+
+def ingest_era_content(args, csvfile):
+    shlog.normal("about to open %s",args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    rows = []
+    with open(csvfile) as f:
+        rows = [tuple(line) for line in csv.reader(f)]
+    del rows[:1]
+    f.close()
+    eraTable.insert(con, rows)
+    ingestTable.insert(con, [[iso_now(),args.dbfile,'ERAS']])
     
 ###################################################################
 #
@@ -655,6 +683,9 @@ if __name__ == "__main__":
     list_parser.set_defaults(func=list)
     list_parser.add_argument(   "--chr", "-c", help='Chromosome Numbers' , default='1')
 
+    # Subcommand  to ingest csv to sqlite3 db file
+    era_ingest_parser = subparsers.add_parser('era_ingest', description=era_ingest.__doc__)
+    era_ingest_parser.set_defaults(func=era_ingest)
     
     dbinfo_parser = subparsers.add_parser('dbinfo', description=dbinfo.__doc__)
     dbinfo_parser.set_defaults(func=dbinfo)
