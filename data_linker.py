@@ -37,6 +37,27 @@ def get_nodes(args):
     return node_list
 
 
+def get_era_volume(args, elem, era):
+    # make a sql request to get volume of information passed in an era
+    # shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    # this query returns all views that have their paths matched with args.searchterm
+    sql = """SELECT DISTINCT p.Value
+             FROM ELEMENTS e
+			 INNER JOIN PROPERTIES p on p.Id = e.Id and p.Key = 'PL4C4H0L'
+             WHERE e.ID = 'F1LL3R'""".replace('F1LL3R', elem).replace('PL4C4H0L', era)
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        volume = int(rows[0][0])
+    except IndexError:
+        return 0
+    return volume
+
+
 
 if __name__ == "__main__":
 
@@ -69,8 +90,39 @@ if __name__ == "__main__":
     for fire_to_node in fire_to_node_links:
         for pathway in fire_to_node:
             print('Source: ' + c.get_elem_name(args, pathway[0]) + ' // Target: ' + c.get_elem_name(args, pathway[-1]))
+
+            # USEFUL: generate empty dict for eras
+            era_dict = {}
+            for i in c.get_all_eras(args):
+                era_dict[i] = []
+
             for elem in pathway:
                 print(c.get_elem_name(args, elem))
+                e_type = c.get_elem_type(args, elem)
+
+                # USEFUL: catch processes and their types
+                if e_type.endswith('Process'):
+                    print('Process detected. ')
+                    # USEFUL: get all eras associated with the activity
+                    # can make calls and separate
+                    for i in c.get_elem_eras(args, elem):
+                        print('Era Detected: ' + i)
+
+                # Useful: catch artifacts and Data object
+                if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
+                    print('Data detected')
+                    for era in list(era_dict.keys()):
+                        era_dict[era].append(get_era_volume(args, elem, era))
+                        pass
+
+            for era in list(era_dict.keys()):
+                total = 0
+                for volume in era_dict[era]:
+                    total += volume
+                print('Bytes collected in Era ' + era + ': ' + str(total))
+
+
+
             print('\n\n')
             pass
 
