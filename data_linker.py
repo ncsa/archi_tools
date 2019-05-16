@@ -112,8 +112,9 @@ if __name__ == "__main__":
                 if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
                     print('Data detected')
                     for era in list(era_dict.keys()):
-                        era_dict[era].append(get_era_volume(args, elem, era))
-                        pass
+                        era_vol = get_era_volume(args, elem, era)
+                        era_dict[era].append(era_vol)
+                        print(era + ': ' + str(era_vol))
 
             for era in list(era_dict.keys()):
                 total = 0
