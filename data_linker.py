@@ -11,9 +11,18 @@ def get_fire(args):
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
     # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT e.Id
-             FROM ELEMENTS e
-             INNER JOIN PROPERTIES p on p.ID = e.Id and p.Key = 'Fire'"""
+    if args.search_term is None:
+        sql = """SELECT e.Id
+                 FROM ELEMENTS e
+                 INNER JOIN PROPERTIES p on p.ID = e.Id and p.Key = 'Fire'"""
+    else:
+        sql = """SELECT DISTINCT Object_id as Id
+                 FROM FOLDER f
+                 INNER JOIN VIEWS v on v.Parent_folder_id = f.Id
+                 INNER JOIN VIEW_OBJECTS vo on v.Id = vo.View_id
+				 INNER JOIN ELEMENTS e on e.Id = vo.Object_id
+                 INNER JOIN PROPERTIES p on p.ID = e.Id and p.Key = 'Fire'
+				 WHERE f.Depth like '%F1LL3R%'""".replace('F1LL3R', str(args.search_term))
     shlog.verbose(sql)
     curs.execute(sql)
     rows = curs.fetchall()
@@ -26,10 +35,18 @@ def get_nodes(args):
     shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
-    # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT ID
-             FROM ELEMENTS
-             WHERE Type = 'Node'"""
+    if args.search_term is None:
+        # this query returns all views that have their paths matched with args.searchterm
+        sql = """SELECT ID
+                 FROM ELEMENTS
+                 WHERE Type = 'Node'"""
+    else:
+        sql = """SELECT DISTINCT Object_id as Id
+                 FROM FOLDER f
+                 INNER JOIN VIEWS v on v.Parent_folder_id = f.Id
+                 INNER JOIN VIEW_OBJECTS vo on v.Id = vo.View_id
+				 INNER JOIN ELEMENTS e on e.Id = vo.Object_id
+				 WHERE f.Depth like '%F1LL3R%' and e.Type = 'Node'""".replace('F1LL3R', str(args.search_term))
     shlog.verbose(sql)
     curs.execute(sql)
     rows = curs.fetchall()
@@ -56,8 +73,6 @@ def get_era_volume(args, elem, era):
     except IndexError:
         return 0
     return volume
-
-
 
 if __name__ == "__main__":
 
@@ -120,7 +135,7 @@ if __name__ == "__main__":
                 total = 0
                 for volume in era_dict[era]:
                     total += volume
-                print('Bytes collected in Era ' + era + ': ' + str(total))
+                print('Bytes collected in Era ' + era + ': ' + str(total * c.get_era_fires(args, era)))
 
 
 

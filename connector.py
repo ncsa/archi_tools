@@ -1,3 +1,4 @@
+# coding=utf-8
 import sqlite3
 import shlog
 import networkx as nx
@@ -15,7 +16,7 @@ def get_connections(args):
                  FROM RELATIONS"""
     else:
         # else, put it to good use
-        sql = """SELECT Source, Target
+        sql = """SELECT DISTINCT Source, Target
                  FROM VIEWS v
                  INNER JOIN FOLDER f on f.id = v.Parent_folder_id
                  INNER JOIN CONNECTIONS c on c.view_id = v.id
@@ -32,9 +33,17 @@ def get_elements(args):
     shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
-    # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT Id
-             FROM ELEMENTS"""
+    if args.search_term is None:
+        # get all relations if no search_term flag had been passed
+        sql = """SELECT Id
+                 FROM ELEMENTS"""
+    else:
+        sql = """SELECT DISTINCT Object_id as Id
+                 FROM FOLDER f
+                 INNER JOIN VIEWS v on v.Parent_folder_id = f.Id
+                 INNER JOIN VIEW_OBJECTS vo on v.Id = vo.View_id
+                 WHERE f.Depth like '%F1LL3R%'""".replace('F1LL3R', str(args.search_term))
+
     shlog.verbose(sql)
     curs.execute(sql)
     rows = curs.fetchall()
@@ -160,6 +169,28 @@ def get_all_eras(args):
     except IndexError:
         return ''
     return era_list
+
+
+def get_era_fires(args, era):
+    # make a sql request to get element name though it's ID
+    # shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    # this query returns all views that have their paths matched with args.searchterm
+    sql = """SELECT Fires
+             FROM ERAS
+             WHERE EraID = '%s'""" % era
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        fires = int(rows[0][0])
+    except IndexError:
+        return 0
+    return fires
+
+
 
 ###########################################################
 #
