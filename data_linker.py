@@ -74,6 +74,30 @@ def get_era_volume(args, elem, era):
         return 0
     return volume
 
+
+def get_connection_info(args, source, target):
+    # make a sql request to get info about the relation
+    # make a sql request to get volume of information passed in an era
+    # shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    # this query returns all views that have their paths matched with args.searchterm
+    sql = """SELECT Type, Name
+             FROM RELATIONS
+             WHERE (Source = 'F1LL3R1' AND Target = 'F1LL3R2')
+             or (Source = 'F1LL3R2' AND Target = 'F1LL3R1')
+             LIMIT 1""".replace('F1LL3R1', source).replace('F1LL3R2', target)
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        volume = rows[0]
+    except IndexError:
+        return 0
+    return volume
+
+
 if __name__ == "__main__":
 
     main_parser = argparse.ArgumentParser(
@@ -111,8 +135,18 @@ if __name__ == "__main__":
             for i in c.get_all_eras(args):
                 era_dict[i] = []
 
+            # USEFUL: get the connection that lead up to this element
+            prev = None
             for elem in pathway:
                 print(c.get_elem_name(args, elem))
+
+                # USEFUL: get the connection that lead up to this element
+                if prev is not None:
+                    connection = get_connection_info(args, prev, elem)
+                    print('>>> ' + connection[1] + ' (' + connection[0] + ') >>>')
+                # prepare for the next connection loop
+                prev = elem
+
                 e_type = c.get_elem_type(args, elem)
 
                 # USEFUL: catch processes and their types
