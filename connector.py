@@ -9,9 +9,9 @@ def get_connections(args):
     shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
-    # this query returns all connections that have their paths matched with args.searchterm
+    # this query returns all connections that have their paths matched with args.search_term
     if args.search_term is None:
-        # get all relations if no search_term flag had been passed
+        # get all unique relations if no search_term flag had been passed
         sql = """SELECT DISTINCT Source, Target
                  FROM RELATIONS"""
     else:
@@ -21,7 +21,9 @@ def get_connections(args):
                  INNER JOIN FOLDER f on f.id = v.Parent_folder_id
                  INNER JOIN CONNECTIONS c on c.view_id = v.id
                  INNER JOIN RELATIONS r on r.Id = c.relationship_id
-                 WHERE f.Depth LIKE '%F1LL3R%'""".replace('F1LL3R', str(args.search_term))
+                 INNER JOIN ELEMENTS e1 on e1.ID = r.Source
+				 INNER JOIN ELEMENTS e2 on e2.ID = r.Target
+                 WHERE f.Depth LIKE '%F1LL3R%' AND e1.Type <> 'Contract' AND e2.Type <> 'Contract' AND e1.Type <> 'BusinessEvent' AND e2.Type <> 'BusinessEvent' """.replace('F1LL3R', str(args.search_term))
     shlog.verbose(sql)
     curs.execute(sql)
     connection_list = curs.fetchall()
