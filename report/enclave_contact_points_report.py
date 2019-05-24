@@ -47,21 +47,21 @@ def enclave_contact_points_report(args):
                                             INNER JOIN CONNECTIONS c on c.view_id = v.Id
                                             INNER JOIN RELATIONS r on r.ID = c.relationship_id
                                             WHERE v.Id = '{View_id}' AND r.Target = '{Object_id}' AND r.Type <> 'CompositionRelationship')
-                                            
+
                                             SELECT CASE r.Name WHEN '' THEN r.Type ELSE r.Name || ' - ' || r.Type END as RelName, r.Target as ElementId
                                             FROM FOLDER f
                                             INNER JOIN VIEWS v on v.Parent_folder_id = f.Id
                                             INNER JOIN CONNECTIONS c on c.view_id = v.Id
                                             INNER JOIN RELATIONS r on r.ID = c.relationship_id
                                             WHERE v.Id = '{View_id}' AND r.Source = '{Object_id}' AND r.Type <> 'CompositionRelationship'
-                                            
+
                                             UNION ALL
-                                            
+
                                             SELECT RelName, ElementId FROM TargetList"""
                                     )
     Connections.add_report_segment(
         SegmentSQL(
-            """SELECT '' as Blank1, '' as Blank2, '' as Blank3, '' as Blank4, '' as Blank5, '{RelName}' as RelName, e.Name as ElementName 
+            """SELECT '' as Blank1, '' as Blank2, '' as Blank3, '' as Blank4, '' as Blank5, '{RelName}' as RelName, e.Name as ElementName
                 FROM ELEMENTS e
                 WHERE e.Id = '{ElementId}'""")
     )

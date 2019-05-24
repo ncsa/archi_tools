@@ -3,6 +3,33 @@ import argparse
 import shlog
 import sqlite3
 import networkx
+import requests
+import json
+
+api_key = "sekrit"
+2
+domain = "ncsa-at-illinois"
+
+
+def search_assets(field_param, query_param):
+    """Search items in the freshservice CMDB
+
+    Parameters
+    ----------
+    field_param: str
+        Specifies which field should be used to search for an asset. Allowed parameters
+        are 'name', 'asset_tag', or 'serial_number'.
+    query_param: str
+        What you would like to search for based off of the field_param. For example,
+        field_param="name", query_param="andrea".
+    """
+    headers = {'Content-Type': 'application/json'}
+    search = requests.get(
+        "https://{domain}.freshservice.com/cmdb/items/list.json?field={field_param}&q={query_param}".replace('{domain}',
+                                                                                                             domain).replace(
+            '{field_param}', field_param).replace('{query_param}', query_param), headers=headers,
+        auth=(api_key, "1234"))
+    return json.loads(search.content)
 
 
 def get_fire(args):
