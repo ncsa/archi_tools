@@ -5,11 +5,20 @@ import sqlite3
 import networkx
 import requests
 import json
+import pandas as pd
 
+# freshservice api settings
 api_key = "sekrit"
 
 domain = "ncsa-at-illinois"
 
+def get_calls():
+   """Returns number of API calls made in Python session
+   """
+   get_calls.counter += 1
+
+
+get_calls.counter = 0
 
 def search_assets(field_param, query_param):
     """Search items in the freshservice CMDB
@@ -29,8 +38,11 @@ def search_assets(field_param, query_param):
                                                                                                              domain).replace(
             '{field_param}', field_param).replace('{query_param}', query_param), headers=headers,
         auth=(api_key, "1234"))
+    if search.status_code == 403:
+        print(search.content)
+        input("Continue?")
+    get_calls()
     return json.loads(search.content)
-
 
 def get_fire(args):
     # return a list of html files to nuke
@@ -81,24 +93,18 @@ def get_nodes(args):
 
 
 def get_era_volume(args, elem, era):
-    # make a sql request to get volume of information passed in an era
-    # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
-    # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT DISTINCT p.Value
-             FROM ELEMENTS e
-			 INNER JOIN PROPERTIES p on p.Id = e.Id and p.Key = 'PL4C4H0L'
-             WHERE e.ID = 'F1LL3R'""".replace('F1LL3R', elem).replace('PL4C4H0L', era)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
-    # should return one element
+    # make a request
+    # This dictionary has the ID #s for the asset types inside freshservice
+    asset_dict = {"Artifact": "10001075124",
+                  "DataObject": "10001075342"}
     try:
-        volume = int(rows[0][0])
-    except IndexError:
-        return 0
-    return volume
+        if c.get_elem_type(args, elem).endswith('Artifact'):
+            vol = search_assets("asset_tag", elem)["config_items"][0]["levelfield_values"]["bytes_%s" % asset_dict['Artifact']]
+        else:
+            vol = search_assets("asset_tag", elem)["config_items"][0]["levelfield_values"]["bytes_%s" % asset_dict['DataObject']]
+    except:
+        vol = 99999
+    return vol
 
 
 def get_connection_info(args, source, target):
@@ -152,62 +158,50 @@ if __name__ == "__main__":
                 shlog.verbose(fire + ' cannot reach ' + node)
             if link_checker != []:
                 fire_to_node_links.append(link_checker[0])
+
+    # start logging
+    con_log = {}
+    csv = pd.read_csv("CapacityReport.csv")
+
     for fire_to_node in fire_to_node_links:
         for pathway in fire_to_node:
-            print('Source: ' + c.get_elem_name(args, pathway[0]) + ' // Target: ' + c.get_elem_name(args, pathway[-1]))
 
-            # USEFUL: generate empty dict for eras
-            era_dict = {}
-            for i in c.get_all_eras(args):
-                era_dict[i] = []
+            # create an entry for the firing element if not yet logged:
+            if pathway[0] not in list(con_log.keys()):
+                con_log[pathway[0]] = {}
+            # create a dict entry for the target node
+            if pathway[-1] not in list(con_log[pathway[0]].keys()):
+                con_log[pathway[0]][pathway[-1]] = {}
 
             # USEFUL: get the connection that lead up to this element
-            prev = None
+            prev_proc = None
             for elem in pathway:
-
-
-                # USEFUL: get the connection that lead up to this element
-                if prev is not None:
-                    connection = get_connection_info(args, prev, elem)
-                    print('>>> ' + connection[1] + ' (' + connection[0] + ') >>>')
-                # prepare for the next connection loop
-                prev = elem
-
-                print(c.get_elem_name(args, elem))
-
+                # get element type to not make repeated requests
                 e_type = c.get_elem_type(args, elem)
 
-                # USEFUL: catch processes and their types
-                if e_type.endswith('Process'):
-                    print('Process detected. ')
-                    # USEFUL: get all eras associated with the activity
-                    # can make calls and separate
-                    for i in c.get_elem_eras(args, elem):
-                        print('Era Detected: ' + i)
-
-                # Useful: catch artifacts and Data objectCONNECTIONS
+                # log an artifact or data object
                 if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
-                    print('Data detected')
-                    for era in list(era_dict.keys()):
-                        era_vol = get_era_volume(args, elem, era)
-                        era_dict[era].append(era_vol)
-                        print(era + ': ' + str(era_vol))
+                    # create a data obj key
+                    if elem not in list(con_log[pathway[0]][pathway[-1]].keys()):
+                        con_log[pathway[0]][pathway[-1]][elem] = {'Bytes':0, 'Process':''}
+                    # make a byte volume request
+                    if con_log[pathway[0]][pathway[-1]][elem]['Bytes'] == 0:
+                        con_log[pathway[0]][pathway[-1]][elem]['Bytes'] = get_era_volume(args, elem, None)
+                    # write backtracked process
+                    if con_log[pathway[0]][pathway[-1]][elem]['Process'] == '':
+                        con_log[pathway[0]][pathway[-1]][elem]['Process'] = prev_proc
 
-            for era in list(era_dict.keys()):
-                total = 0
-                for volume in era_dict[era]:
-                    total += volume
-                print('Bytes collected in Era ' + era + ': ' + str(total * c.get_era_fires(args, era)))
+                    d = {"Fire": [c.get_elem_name(args, pathway[0])],
+                         "Node": [c.get_elem_name(args, pathway[-1])],
+                         "Data Object": [c.get_elem_name(args, elem)],
+                         "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
+                         "Process": [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])]}
+                    df = pd.DataFrame(data=d, columns=["Fire", "Node", "Data Object", "Bytes", "Process"], index=None)
+                    with open('CapacityReport 2.csv', 'a') as f:
+                        df.to_csv(f, index=None)
 
 
-
-            print('\n\n')
-            pass
-
-    # print(c.link_short(args, '635bb685-bacb-43e3-b898-b7be4f94ed56', '711450b4-457b-4229-8e36-a501d464820d'))
-    # print(c.link_short_all(args, '635bb685-bacb-43e3-b898-b7be4f94ed56', '711450b4-457b-4229-8e36-a501d464820d'))
-    #
-    #
-    # a = c.link_all(args, '635bb685-bacb-43e3-b898-b7be4f94ed56', '711450b4-457b-4229-8e36-a501d464820d')
-    # for entry in a:
-    #     print(entry)
+                # save the most recent process to backtrack to it later
+                if e_type.endswith('Process'):
+                    prev_proc = elem
+            print(get_calls.counter)

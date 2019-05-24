@@ -96,6 +96,8 @@ def link_all(args, start, end):
 def get_elem_name(args, elem):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
+    if elem is None:
+        return 'None'
     con = sqlite3.connect(args.dbfile)
     curs = con.cursor()
     # this query returns the name of the supplied element ID
