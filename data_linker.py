@@ -56,7 +56,6 @@ def get_fire(args):
     fire_list = [x[0] for x in rows]
     return fire_list
 
-
 def get_nodes(args):
     # return a list of html files to nuke
     shlog.normal("about to open %s", args.dbfile)
@@ -165,7 +164,7 @@ if __name__ == "__main__":
             # USEFUL: get the connection that lead up to this element
             prev = None
             for elem in pathway:
-                print(c.get_elem_name(args, elem))
+
 
                 # USEFUL: get the connection that lead up to this element
                 if prev is not None:
@@ -173,6 +172,8 @@ if __name__ == "__main__":
                     print('>>> ' + connection[1] + ' (' + connection[0] + ') >>>')
                 # prepare for the next connection loop
                 prev = elem
+
+                print(c.get_elem_name(args, elem))
 
                 e_type = c.get_elem_type(args, elem)
 
@@ -184,7 +185,7 @@ if __name__ == "__main__":
                     for i in c.get_elem_eras(args, elem):
                         print('Era Detected: ' + i)
 
-                # Useful: catch artifacts and Data object
+                # Useful: catch artifacts and Data objectCONNECTIONS
                 if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
                     print('Data detected')
                     for era in list(era_dict.keys()):
