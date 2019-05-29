@@ -6,6 +6,7 @@ import networkx
 import requests
 import json
 import pandas as pd
+import os
 
 # freshservice api settings
 api_key = "sekrit"
@@ -161,6 +162,8 @@ if __name__ == "__main__":
 
     # start logging
     con_log = {}
+    head_toggle = True
+    os.remove("CapacityReport 2.csv")
     csv = pd.read_csv("CapacityReport.csv")
 
     for fire_to_node in fire_to_node_links:
@@ -173,11 +176,21 @@ if __name__ == "__main__":
             if pathway[-1] not in list(con_log[pathway[0]].keys()):
                 con_log[pathway[0]][pathway[-1]] = {}
 
+            full_path = ""
             # USEFUL: get the connection that lead up to this element
+            prev = None
             prev_proc = None
             for elem in pathway:
                 # get element type to not make repeated requests
                 e_type = c.get_elem_type(args, elem)
+
+                if prev is not None:
+                    # if there's something in prev, continue mapping
+                    connection = get_connection_info(args, prev, elem)
+                    full_path += ' >--' + connection[1] + ' (' + connection[0] + ')--> '  + c.get_elem_name(args, elem)
+                else:
+                    # if nothing is prev, that means we're looking at the first element
+                    full_path = c.get_elem_name(args, elem)
 
                 # log an artifact or data object
                 if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
@@ -187,6 +200,7 @@ if __name__ == "__main__":
                     # make a byte volume request
                     if con_log[pathway[0]][pathway[-1]][elem]['Bytes'] == 0:
                         con_log[pathway[0]][pathway[-1]][elem]['Bytes'] = get_era_volume(args, elem, None)
+                        print(get_calls.counter)
                     # write backtracked process
                     if con_log[pathway[0]][pathway[-1]][elem]['Process'] == '':
                         con_log[pathway[0]][pathway[-1]][elem]['Process'] = prev_proc
@@ -195,13 +209,17 @@ if __name__ == "__main__":
                          "Node": [c.get_elem_name(args, pathway[-1])],
                          "Data Object": [c.get_elem_name(args, elem)],
                          "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
-                         "Process": [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])]}
-                    df = pd.DataFrame(data=d, columns=["Fire", "Node", "Data Object", "Bytes", "Process"], index=None)
+                         "Process": [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])],
+                         "Full Path": full_path}
+                    df = pd.DataFrame(data=d, columns=["Fire", "Node", "Data Object", "Bytes", "Process", "Full Path"], index=None)
                     with open('CapacityReport 2.csv', 'a') as f:
-                        df.to_csv(f, index=None)
+                        df.to_csv(f, header=head_toggle, index=head_toggle)
+                    # stop writing headers after the first one had been written
+                    head_toggle = False
 
 
                 # save the most recent process to backtrack to it later
                 if e_type.endswith('Process'):
                     prev_proc = elem
-            print(get_calls.counter)
+                prev = elem
+
