@@ -93,19 +93,17 @@ def get_nodes(args):
     return node_list
 
 
-def get_era_volume(args, elem, era):
+def get_era_volume(args, elem):
     # make a request
     # This dictionary has the ID #s for the asset types inside freshservice
-    asset_dict = {"Artifact": "10001075124",
-                  "DataObject": "10001075342"}
     try:
-        if c.get_elem_type(args, elem).endswith('Artifact'):
-            vol = search_assets("asset_tag", elem)["config_items"][0]["levelfield_values"]["bytes_%s" % asset_dict['Artifact']]
-        else:
-            vol = search_assets("asset_tag", elem)["config_items"][0]["levelfield_values"]["bytes_%s" % asset_dict['DataObject']]
+        asset = search_assets("asset_tag", "f_" + elem)
+        volumes_list = asset["config_items"][0]["levelfield_values"]
     except:
-        vol = 99999
-    return vol
+        # return false byte values if we couldn't retrieve
+        for era in c.get_all_eras(args):
+            volumes_list[era] = u'0'
+    return volumes_list
 
 
 def get_connection_info(args, source, target):
@@ -131,6 +129,17 @@ def get_connection_info(args, source, target):
     return volume
 
 
+def node_hop_check(args, path):
+    """Checks if any node hopping accurs in a pathway
+       Returns True and False"""
+    for elem in path:
+        if c.get_elem_type(args, elem) == 'Node' and elem != path[-1]:
+            # print(c.get_elem_name(args, elem) + ' is not ' + c.get_elem_name(args, path[-1]))
+            return True
+    # if we got here, that means that the node check had not failed once.
+    return False
+
+
 if __name__ == "__main__":
 
     main_parser = argparse.ArgumentParser(
@@ -152,19 +161,24 @@ if __name__ == "__main__":
     for fire in fire_sources:
         for node in target_nodes:
             link_checker = []
+            no_node_hoppers = []
             try:
                 link_checker = [c.link_short_all(args, fire, node)]
-                pass
+                for path in link_checker[0]:
+                    if node_hop_check(args, path) == False:
+                        no_node_hoppers.append(path)
             except networkx.exception.NetworkXNoPath:
                 shlog.verbose(fire + ' cannot reach ' + node)
-            if link_checker != []:
-                fire_to_node_links.append(link_checker[0])
+            if no_node_hoppers != []:
+                fire_to_node_links.append(no_node_hoppers)
 
     # start logging
     con_log = {}
     head_toggle = True
-    os.remove("CapacityReport 2.csv")
-    csv = pd.read_csv("CapacityReport.csv")
+    try:
+        os.remove("CapacityReport 2.csv")
+    except OSError:
+        print('Warning: CapacityReport 2.csv does not exist, ignoring..')
 
     for fire_to_node in fire_to_node_links:
         for pathway in fire_to_node:
@@ -183,7 +197,7 @@ if __name__ == "__main__":
             for elem in pathway:
                 # get element type to not make repeated requests
                 e_type = c.get_elem_type(args, elem)
-
+                # full path logging happens here
                 if prev is not None:
                     # if there's something in prev, continue mapping
                     connection = get_connection_info(args, prev, elem)
@@ -191,35 +205,63 @@ if __name__ == "__main__":
                 else:
                     # if nothing is prev, that means we're looking at the first element
                     full_path = c.get_elem_name(args, elem)
+                prev = elem
+
+                # save the most recent process to backtrack to it later
+                if e_type.endswith('Process'):
+                    prev_proc = elem
+
+                # cancel any further handling (which is all about data) if the fire, node, object, and process match
+                # this will eliminate duplicates, but will result in only the very first path being listed and credited
+                try:
+                    if pathway[0] in list(con_log.keys()) and pathway[-1] in list(con_log[pathway[0]].keys()) \
+                            and con_log[pathway[0]][pathway[-1]][elem]['Process'] == prev_proc \
+                            and elem in list(con_log[pathway[0]][pathway[-1]].keys()):
+                        break
+                except KeyError:
+                    # KeyError is caused by con_log[pathway[0]][pathway[-1]][elem]['Process'], namely [elem] not
+                    # being present. Continue as normal.
+                    pass
 
                 # log an artifact or data object
                 if e_type.endswith('DataObject') or e_type.endswith('Artifact'):
                     # create a data obj key
                     if elem not in list(con_log[pathway[0]][pathway[-1]].keys()):
-                        con_log[pathway[0]][pathway[-1]][elem] = {'Bytes':0, 'Process':''}
+                        con_log[pathway[0]][pathway[-1]][elem] = {'Process':''}
                     # make a byte volume request
-                    if con_log[pathway[0]][pathway[-1]][elem]['Bytes'] == 0:
-                        con_log[pathway[0]][pathway[-1]][elem]['Bytes'] = get_era_volume(args, elem, None)
-                        print(get_calls.counter)
+                    # if con_log[pathway[0]][pathway[-1]][elem]['Bytes'] == 0:
+                    #     con_log[pathway[0]][pathway[-1]][elem]['Bytes'] = get_era_volume(args, elem, None)
+                    #     print(get_calls.counter)
                     # write backtracked process
                     if con_log[pathway[0]][pathway[-1]][elem]['Process'] == '':
                         con_log[pathway[0]][pathway[-1]][elem]['Process'] = prev_proc
 
+                    # entries are written in three parts to allow for a dynamic dict size
+                    # write fire, node, data object to the dict
                     d = {"Fire": [c.get_elem_name(args, pathway[0])],
                          "Node": [c.get_elem_name(args, pathway[-1])],
-                         "Data Object": [c.get_elem_name(args, elem)],
-                         "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
-                         "Process": [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])],
-                         "Full Path": full_path}
-                    df = pd.DataFrame(data=d, columns=["Fire", "Node", "Data Object", "Bytes", "Process", "Full Path"], index=None)
+                         "Data Object": [c.get_elem_name(args, elem)]
+                         # "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
+                         }
+                    # write bytes
+                    volumes = get_era_volume(args, elem)
+                    for era in list(volumes.keys()):
+                        if 'bytes' in era or 'era' in era:
+                            d[era] = [volumes[era]]
+                    print('API calls made: ' + str(get_calls.counter))
+                    # write full path
+                    d["Process"] = [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])]
+                    # d["Full Path"] = full_path
+                    # debug: actual full path under investigation
+                    d_path = ''
+                    for d_elem in pathway:
+                        d_path += c.get_elem_name(args, d_elem) + ' >>> '
+                    d["Full Path"] = d_path
+
+                    df = pd.DataFrame(data=d, columns=list(d.keys()), index=None)
                     with open('CapacityReport 2.csv', 'a') as f:
                         df.to_csv(f, header=head_toggle, index=head_toggle)
                     # stop writing headers after the first one had been written
                     head_toggle = False
 
-
-                # save the most recent process to backtrack to it later
-                if e_type.endswith('Process'):
-                    prev_proc = elem
-                prev = elem
 
