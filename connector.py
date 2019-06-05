@@ -12,11 +12,35 @@ def get_connections(args):
     # this query returns all connections that have their paths matched with args.search_term
     if args.search_term is None:
         # get all unique relations if no search_term flag had been passed
-        sql = """SELECT DISTINCT Source, Target
-                 FROM RELATIONS"""
+        sql = """SELECT DISTINCT /* CASE handling for Node -> Artifact and Reads relations to switch them around */
+				 CASE 
+							WHEN e1.Type = 'Node' AND e2.Type='Artifact' THEN Target 
+							WHEN r.Name = 'Read' THEN Target
+							ELSE Source 
+				 END as Source, 
+				 CASE 
+							WHEN e1.Type = 'Node' AND e2.Type='Artifact' THEN Source 
+							WHEN r.Name = 'Read' THEN Source
+							ELSE Target 
+				 END as Target
+                 FROM RELATIONS r
+				 INNER JOIN ELEMENTS e1 on e1.ID = r.Source
+				 INNER JOIN ELEMENTS e2 on e2.ID = r.Target
+				 WHERE e1.Type <> 'Contract' AND e2.Type <> 'Contract' AND e1.Type <> 'BusinessEvent' AND e2.Type <> 'BusinessEvent'
+				 """
     else:
         # else, put it to good use
-        sql = """SELECT DISTINCT Source, Target
+        sql = """SELECT DISTINCT /* CASE handling for Node -> Artifact and Reads relations to switch them around */
+				 CASE 
+							WHEN e1.Type = 'Node' AND e2.Type='Artifact' THEN Target 
+							WHEN r.Name = 'Read' THEN Target
+							ELSE Source 
+				 END as Source, 
+				 CASE 
+							WHEN e1.Type = 'Node' AND e2.Type='Artifact' THEN Source 
+							WHEN r.Name = 'Read' THEN Source
+							ELSE Target 
+				 END as Target
                  FROM VIEWS v
                  INNER JOIN FOLDER f on f.id = v.Parent_folder_id
                  INNER JOIN CONNECTIONS c on c.view_id = v.id
@@ -66,13 +90,17 @@ def link_short(args, start, end):
     # get connection between two shortest
     return nx.shortest_path(g, start, end)
 
-def link_short_all(args, start, end):
+
+def link_short_all(args, start, end, directional=False):
     # prepare Graph
     elements = get_elements(args)
     connections = get_connections(args)
 
     # get all connections as tuples
-    g = nx.Graph()
+    if directional:
+        g = nx.DiGraph()
+    else:
+        g = nx.Graph()
     g.add_nodes_from(elements)
     g.add_edges_from(connections)
 

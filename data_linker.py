@@ -163,7 +163,7 @@ if __name__ == "__main__":
             link_checker = []
             no_node_hoppers = []
             try:
-                link_checker = [c.link_short_all(args, fire, node)]
+                link_checker = [c.link_short_all(args, fire, node, True)]
                 for path in link_checker[0]:
                     if node_hop_check(args, path) == False:
                         no_node_hoppers.append(path)
