@@ -190,6 +190,20 @@ if __name__ == "__main__":
             if pathway[-1] not in list(con_log[pathway[0]].keys()):
                 con_log[pathway[0]][pathway[-1]] = {}
 
+            # debug: actual full path under investigation
+            d_path = ''
+            d_prev = None
+            for d_elem in pathway:
+                if d_prev is not None:
+                    # if there's something in prev, continue mapping
+                    connection = get_connection_info(args, d_prev, d_elem)
+                    d_path += ' >--' + connection[1] + ' (' + connection[0] + ')--> ' + c.get_elem_name(args, d_elem)
+                else:
+                    # if nothing is prev, that means we're looking at the first element
+                    d_path = c.get_elem_name(args, d_elem)
+                d_prev = d_elem
+
+
             full_path = ""
             # USEFUL: get the connection that lead up to this element
             prev = None
@@ -252,10 +266,6 @@ if __name__ == "__main__":
                     # write full path
                     d["Process"] = [c.get_elem_name(args, con_log[pathway[0]][pathway[-1]][elem]['Process'])]
                     # d["Full Path"] = full_path
-                    # debug: actual full path under investigation
-                    d_path = ''
-                    for d_elem in pathway:
-                        d_path += c.get_elem_name(args, d_elem) + ' >>> '
                     d["Full Path"] = d_path
 
                     df = pd.DataFrame(data=d, columns=list(d.keys()), index=None)
