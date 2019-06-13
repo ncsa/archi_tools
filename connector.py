@@ -26,7 +26,7 @@ def get_connections(args):
                  FROM RELATIONS r
 				 INNER JOIN ELEMENTS e1 on e1.ID = r.Source
 				 INNER JOIN ELEMENTS e2 on e2.ID = r.Target
-				 WHERE e1.Type <> 'Contract' AND e2.Type <> 'Contract' AND e1.Type <> 'BusinessEvent' AND e2.Type <> 'BusinessEvent'
+				 WHERE e1.Type <> 'Contract' AND e2.Type <> 'Contract'
 				 """
     else:
         # else, put it to good use
@@ -47,7 +47,7 @@ def get_connections(args):
                  INNER JOIN RELATIONS r on r.Id = c.relationship_id
                  INNER JOIN ELEMENTS e1 on e1.ID = r.Source
 				 INNER JOIN ELEMENTS e2 on e2.ID = r.Target
-                 WHERE f.Depth LIKE '%F1LL3R%' AND e1.Type <> 'Contract' AND e2.Type <> 'Contract' AND e1.Type <> 'BusinessEvent' AND e2.Type <> 'BusinessEvent' """.replace('F1LL3R', str(args.search_term))
+                 WHERE f.Depth LIKE '%F1LL3R%' AND e1.Type <> 'Contract' AND e2.Type <> 'Contract'""".replace('F1LL3R', str(args.search_term))
     shlog.verbose(sql)
     curs.execute(sql)
     connection_list = curs.fetchall()
