@@ -10,7 +10,9 @@ import os
 
 # freshservice api settings
 api_key = "sekrit"
-
+# ask someone for the contents of this file
+with open('freshservice.key','r') as pw_file:
+    api_key = pw_file.readline()
 domain = "ncsa-at-illinois"
 
 def get_calls():
