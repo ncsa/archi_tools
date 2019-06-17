@@ -47,7 +47,7 @@ def search_assets(field_param, query_param):
     get_calls()
     return json.loads(search.content)
 
-def get_fire(args):
+def get_trigger(args):
     # return a list of html files to nuke
     shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
@@ -74,8 +74,8 @@ def get_fire(args):
     shlog.verbose(sql)
     curs.execute(sql)
     rows = curs.fetchall()
-    fire_list = [x[0] for x in rows]
-    return fire_list
+    trigger_list = [x[0] for x in rows]
+    return trigger_list
 
 def get_nodes(args):
     # return a list of html files to nuke
@@ -161,24 +161,24 @@ if __name__ == "__main__":
                              default=None)
     args = main_parser.parse_args()
 
-    fire_sources = get_fire(args)
+    trigger_sources = get_trigger(args)
     target_nodes = get_nodes(args)
 
-    fire_to_node_links = []
+    trigger_to_node_links = []
     # loop through elements and calculate possible routes between them and nodes
-    for fire in fire_sources:
+    for trigger in trigger_sources:
         for node in target_nodes:
             link_checker = []
             no_node_hoppers = []
             try:
-                link_checker = [c.link_short_all(args, fire, node, True)]
+                link_checker = [c.link_short_all(args, trigger, node, True)]
                 for path in link_checker[0]:
                     if node_hop_check(args, path) == False:
                         no_node_hoppers.append(path)
             except networkx.exception.NetworkXNoPath:
-                shlog.verbose(fire + ' cannot reach ' + node)
+                shlog.verbose(trigger + ' cannot reach ' + node)
             if no_node_hoppers != []:
-                fire_to_node_links.append(no_node_hoppers)
+                trigger_to_node_links.append(no_node_hoppers)
 
     # start logging
     con_log = {}
@@ -188,8 +188,8 @@ if __name__ == "__main__":
     except OSError:
         print('Warning: CapacityReport 2.csv does not exist, ignoring..')
 
-    for fire_to_node in fire_to_node_links:
-        for pathway in fire_to_node:
+    for trigger_to_node in trigger_to_node_links:
+        for pathway in trigger_to_node:
 
             # create an entry for the firing element if not yet logged:
             if pathway[0] not in list(con_log.keys()):
@@ -233,7 +233,7 @@ if __name__ == "__main__":
                 if e_type.endswith('Process'):
                     prev_proc = elem
 
-                # cancel any further handling (which is all about data) if the fire, node, object, and process match
+                # cancel any further handling (which is all about data) if the trigger, node, object, and process match
                 # this will eliminate duplicates, but will result in only the very first path being listed and credited
                 try:
                     if pathway[0] in list(con_log.keys()) and pathway[-1] in list(con_log[pathway[0]].keys()) \
@@ -259,8 +259,8 @@ if __name__ == "__main__":
                         con_log[pathway[0]][pathway[-1]][elem]['Process'] = prev_proc
 
                     # entries are written in three parts to allow for a dynamic dict size
-                    # write fire, node, data object to the dict
-                    d = {"Fire": [c.get_elem_name(args, pathway[0])],
+                    # write trigger, node, data object to the dict
+                    d = {"Trigger": [c.get_elem_name(args, pathway[0])],
                          "Node": [c.get_elem_name(args, pathway[-1])],
                          "Data Object": [c.get_elem_name(args, elem)]
                          # "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],

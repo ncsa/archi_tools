@@ -203,7 +203,7 @@ def get_all_eras(args):
     return era_list
 
 
-def get_era_fires(args, era):
+def get_era_triggers(args, era):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
     con = sqlite3.connect(args.dbfile)
@@ -217,10 +217,10 @@ def get_era_fires(args, era):
     rows = curs.fetchall()
     # should return one element
     try:
-        fires = int(rows[0][0])
+        triggers = int(rows[0][0])
     except IndexError:
         return 0
-    return fires
+    return triggers
 
 
 
