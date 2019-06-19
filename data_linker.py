@@ -201,7 +201,10 @@ if __name__ == "__main__":
             # debug: actual full path under investigation
             d_path = ''
             d_prev = None
+            d_first_process = None
             for d_elem in pathway:
+                if d_first_process == None and c.get_elem_type(args, d_elem).endswith('Process'):
+                    d_first_process = c.get_elem_name(args, d_elem)
                 if d_prev is not None:
                     # if there's something in prev, continue mapping
                     connection = get_connection_info(args, d_prev, d_elem)
@@ -262,7 +265,8 @@ if __name__ == "__main__":
                     # write trigger, node, data object to the dict
                     d = {"Trigger": [c.get_elem_name(args, pathway[0])],
                          "Node": [c.get_elem_name(args, pathway[-1])],
-                         "Data Object": [c.get_elem_name(args, elem)]
+                         "Data Object": [c.get_elem_name(args, elem)],
+                         "Origin Process": d_first_process
                          # "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
                          }
                     # write bytes
