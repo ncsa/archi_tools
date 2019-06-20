@@ -7,6 +7,7 @@ import requests
 import json
 import pandas as pd
 import os
+from collections import OrderedDict
 
 # freshservice api settings
 api_key = "sekrit"
@@ -114,29 +115,6 @@ def get_era_volume(args, elem):
     return volumes_list
 
 
-def get_connection_info(args, source, target):
-    # make a sql request to get info about the relation
-    # make a sql request to get volume of information passed in an era
-    # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
-    # this query returns all views that have their paths matched with args.searchterm
-    sql = """SELECT Type, Name
-             FROM RELATIONS
-             WHERE (Source = 'F1LL3R1' AND Target = 'F1LL3R2')
-             or (Source = 'F1LL3R2' AND Target = 'F1LL3R1')
-             LIMIT 1""".replace('F1LL3R1', source).replace('F1LL3R2', target)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
-    # should return one element
-    try:
-        volume = rows[0]
-    except IndexError:
-        return 0
-    return volume
-
-
 def node_hop_check(args, path):
     """Checks if any node hopping accurs in a pathway
        Returns True and False"""
@@ -207,7 +185,7 @@ if __name__ == "__main__":
                     d_first_process = c.get_elem_name(args, d_elem)
                 if d_prev is not None:
                     # if there's something in prev, continue mapping
-                    connection = get_connection_info(args, d_prev, d_elem)
+                    connection = c.get_connection_info(args, d_prev, d_elem)
                     d_path += ' >--' + connection[1] + ' (' + connection[0] + ')--> ' + c.get_elem_name(args, d_elem)
                 else:
                     # if nothing is prev, that means we're looking at the first element
@@ -225,7 +203,7 @@ if __name__ == "__main__":
                 # full path logging happens here
                 if prev is not None:
                     # if there's something in prev, continue mapping
-                    connection = get_connection_info(args, prev, elem)
+                    connection = c.get_connection_info(args, prev, elem)
                     full_path += ' >--' + connection[1] + ' (' + connection[0] + ')--> '  + c.get_elem_name(args, elem)
                 else:
                     # if nothing is prev, that means we're looking at the first element
@@ -263,12 +241,12 @@ if __name__ == "__main__":
 
                     # entries are written in three parts to allow for a dynamic dict size
                     # write trigger, node, data object to the dict
-                    d = {"Trigger": [c.get_elem_name(args, pathway[0])],
-                         "Node": [c.get_elem_name(args, pathway[-1])],
-                         "Data Object": [c.get_elem_name(args, elem)],
-                         "Origin Process": d_first_process
-                         # "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
-                         }
+                    d = OrderedDict()
+                    d["Trigger"] = [c.get_elem_name(args, pathway[0])]
+                    d["Node"] = [c.get_elem_name(args, pathway[-1])]
+                    d["Data Object"] = [c.get_elem_name(args, elem)]
+                    d["Origin Process"] = d_first_process
+                    # "Bytes": [con_log[pathway[0]][pathway[-1]][elem]['Bytes']],
                     # write bytes
                     volumes = get_era_volume(args, elem)
                     for era in list(volumes.keys()):
@@ -286,4 +264,11 @@ if __name__ == "__main__":
                     # stop writing headers after the first one had been written
                     head_toggle = False
 
+    with open('CapacityReport 2.csv', 'r') as raw:
+        data = raw.readlines()
+    if data[0][0] == ',':
+        data[0] = data[0][1:]
+        data[1] = data[1][2:]
+        with open('CapacityReport 2.csv', 'w') as raw:
+            raw.writelines(data)
 

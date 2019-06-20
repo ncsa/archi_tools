@@ -42,7 +42,7 @@ if __name__ == "__main__":
         if data[0][0] == ',':
             data[0] = data[0][1:]
             data[1] = data[1][2:]
-        if not data[0].startswith('Node'):
+        if not data[0].startswith('Trigger'):
             raise IncorrectStructure
         with open(args.file, 'w') as raw:
             raw.writelines(data)
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         shlog.error(args.file + ' is empty!')
         exit(0)
     except IncorrectStructure:
-        shlog.error(args.file + ' does not start with a "Node" column and might not be compliant')
+        shlog.error(args.file + ' does not start with a "Trigger" column and might not be compliant')
 
     # write all data to sheet one and give it a filter
     workbook = Workbook(args.file[:-4] + '.xlsx')

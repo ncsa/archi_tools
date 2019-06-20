@@ -222,7 +222,27 @@ def get_era_triggers(args, era):
         return 0
     return triggers
 
-
+def get_connection_info(args, source, target):
+    # make a sql request to get info about the relation
+    # make a sql request to get volume of information passed in an era
+    # shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    # this query returns all views that have their paths matched with args.searchterm
+    sql = """SELECT Type, Name
+             FROM RELATIONS
+             WHERE (Source = 'F1LL3R1' AND Target = 'F1LL3R2')
+             or (Source = 'F1LL3R2' AND Target = 'F1LL3R1')
+             LIMIT 1""".replace('F1LL3R1', source).replace('F1LL3R2', target)
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        volume = rows[0]
+    except IndexError:
+        return 0
+    return volume
 
 ###########################################################
 #
