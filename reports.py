@@ -5,6 +5,7 @@ import argparse
 import sqlite3
 import db
 import sys
+from datetime import datetime
 
 #  do not worry yet about rows that are composite.
 
@@ -313,6 +314,8 @@ if __name__ == "__main__":
     report_parser.add_argument("--function" , "-f", help="def: modulename",default=None)
     report_parser.add_argument("--excelfile" , "-e", help="def: modulename.xslx",default=None)
     report_parser.add_argument("module" , help="obtain report definition from this module")
+    report_parser.add_argument("--timestamp", "-t", help="Add timestamp to output file name", default=False,
+                               action='store_true')
 
   
     args = main_parser.parse_args()
@@ -328,8 +331,9 @@ if __name__ == "__main__":
     if ".py" in args.module:
         shlog.error("Module names do not contain the .py suffix")
         exit(1)
-    if not args.function: args.function = args.module 
-    if not args.excelfile: args.excelfile = args.module + ".xlsx" 
+    if not args.function: args.function = args.module
+    if not args.excelfile or '.xlsx' not in args.excelfile: args.excelfile = args.module + ".xlsx"
+    if args.timestamp: args.excelfile = args.excelfile[:-5] + datetime.now().strftime("_%m.%d.%Y_%H:%M") + '.xlsx'
 
     # add report/validate folders to PATH
     sys.path.insert(0, './validate/')
@@ -349,7 +353,7 @@ if __name__ == "__main__":
     import os #4
     if args.closeexcel:
         shlog.normal("Terminating Excel")
-        os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close window "%s" saving no' -e 'end tell'""" % rpt.args.function)
+        os.system("""osascript -e 'tell application "Microsoft Excel"' -e 'close (every window whose name contains "%s") saving no' -e 'end tell'""" % rpt.args.function)
     # compile header row names into rpt.context_collector
     try:
         rpt.context_collector.remove([])
