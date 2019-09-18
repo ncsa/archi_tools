@@ -52,6 +52,24 @@ def qd(args, sql, passed_stanza):
     return results
 
 
+def get_db_timestamp(self):
+    # return timestamp of the ELEMENTS table in the database, the first one in question
+    con = sqlite3.connect(self.args.dbfile)
+    curs = con.cursor()
+    sql = """SELECT Time
+             FROM INGESTS
+             WHERE IngestType = 'ELEMENTS'"""
+    # shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    # should return one element
+    try:
+        stamp = rows[0]
+    except IndexError:
+        return 0
+    return stamp
+
+
 class Workspace:
     """ Provde an in-memory workslae that can be rendered into excel, etc..."""
     def __init__(self, args):
@@ -135,6 +153,21 @@ class Workspace:
                 worksheet.set_column(c,c, maxc)
         # but, there's one more thing...
         worksheet.freeze_panes(1, 0)
+
+        # create a new sheet that will contain metadata
+        meta_sheet = workbook.add_worksheet(name='Metadata')
+        meta_sheet.write(0, 0, 'Report ran', x)
+        meta_sheet.write(0, 1, datetime.now().strftime("_%m.%d.%Y_%H:%M"), x)
+
+        meta_sheet.write(1, 0, 'Source database', x)
+        meta_sheet.write(1, 1, self.args.dbfile, x)
+
+        meta_sheet.write(2, 0, 'Database timestamp', x)
+        meta_sheet.write(2, 1, str(get_db_timestamp(self)), x)
+
+        for c in range(2):
+                meta_sheet.set_column(c,c, 60)
+
         workbook.close()
         if self.args.show : os.system('open -a "Microsoft Excel" %s' % self.args.excelfile)
              
