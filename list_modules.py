@@ -38,7 +38,7 @@ if __name__ == "__main__":
             try:
                 targetPy = fileList[int(args.ezrun[1:])]
                 targetPy = targetPy.replace('.py','')
-                targetPy = 'python reports.py -l VERBOSE report -s -ce ' + targetPy
+                targetPy = 'python reports.py -l VERBOSE report -s -t -ce ' + targetPy
                 shlog.verbose('Issuing term command: ' + targetPy)
                 os.system(targetPy)
                 shlog.verbose(targetPy + ' executed')
