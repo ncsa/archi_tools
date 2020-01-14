@@ -663,7 +663,8 @@ if __name__ == "__main__":
                              default="ERROR")
     
     main_parser.add_argument("--dbfile", "-d", default="archi_tool.db")
-    main_parser.add_argument("--prefix", "-p", default="LSST_")
+    main_parser.add_argument("--prefix", "-p", default="LSST_", help="This should be the name of the model as seen"
+                                                                     "in Archi")
     main_parser.set_defaults(func=None) # if none then there are  subfunctions
     subparsers = main_parser.add_subparsers(title="subcommands",
                        description='valid subcommands',
