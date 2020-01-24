@@ -218,6 +218,7 @@ def mkdb(args):
         os.remove(args.dbfile)
         shlog.normal("removed old database : %s", args.dbfile)
     except:
+        shlog.normal('Failed to delete db file')
         pass
     con = sqlite3.connect(args.dbfile)
     shlog.normal ("created new database : %s" ,args.dbfile)
@@ -497,7 +498,7 @@ def ingest_enclaves(args, sqldbfile):
     con_temp = sqlite3.connect(args.dbfile)
     c_temp = con_temp.cursor()
     # the ingest_properties query retrieves properties from the archidump database
-    sql = """SELECT DISTINCT e.Id, e.Name, REPLACE(e.Documentation,"'","''"), e1.Name as Location
+    sql = """SELECT DISTINCT e.Id, e.Name, REPLACE(e.Documentation,"'","''") as Documentation, e1.Name as Location
           /* Get all groupings  from the Enclave FOLDER*/
           FROM FOLDER f
           INNER JOIN ELEMENTS  e on e.ParentFolder = f.Id and e.Type = 'Grouping'
@@ -662,7 +663,8 @@ if __name__ == "__main__":
                              help='loglevel NONE, NORMAL, VERBOSE, VVERBOSE, DEBUG',
                              default="ERROR")
     
-    main_parser.add_argument("--dbfile", "-d", default="archi_tool.db")
+    main_parser.add_argument("--dbfile", "-d", default="archi_tool.db", help="Name of the output file without the "
+                                                                             "prefix")
     main_parser.add_argument("--prefix", "-p", default="LSST_", help="This should be the name of the model as seen"
                                                                      "in Archi")
     main_parser.set_defaults(func=None) # if none then there are  subfunctions
