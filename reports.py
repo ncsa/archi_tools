@@ -366,7 +366,7 @@ if __name__ == "__main__":
         exit(1)
     if not args.function: args.function = args.module
     if not args.excelfile or '.xlsx' not in args.excelfile: args.excelfile = args.module + ".xlsx"
-    if args.timestamp: args.excelfile = args.excelfile[:-5] + datetime.now().strftime("_%m.%d.%Y_%H:%M") + '.xlsx'
+    if args.timestamp: args.excelfile = args.excelfile[:-5] + datetime.now().strftime("_%m.%d.%Y_%H.%M") + '.xlsx'
 
     # add report/validate folders to PATH
     sys.path.insert(0, './validate/')

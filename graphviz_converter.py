@@ -1,4 +1,5 @@
 from graphviz import Digraph
+from graphviz import backend
 import argparse
 import shlog
 import os
@@ -75,9 +76,6 @@ os.system(edgesPy)
 shlog.verbose(edgesPy + ' executed')
 
 
-# clean up the *.py and *.xlsx files
-os.remove('graphviz_nodes.py')
-os.remove('graphviz_edges.py')
 
 # load excel output into a pandas frame
 nodes = pd.read_excel('graphviz_nodes.xlsx', sheet_name='Sheet1', index_col=0)
@@ -91,7 +89,16 @@ for index, row in edges.iterrows():
     g.edge(row["Source"], row["Target"], label=row["Name"])
 pass
 
+# clean up the *.py and *.xlsx files
+os.remove('graphviz_nodes.py')
+os.remove('graphviz_edges.py')
+os.remove('graphviz_nodes.pyc')
+os.remove('graphviz_edges.pyc')
+os.remove('graphviz_nodes.xlsx')
+os.remove('graphviz_edges.xlsx')
+
 # save the object into a file
 g.render(filename=args.view + '.dot')
+
 
 

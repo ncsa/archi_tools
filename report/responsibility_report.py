@@ -1,6 +1,6 @@
 from reports import *
 
-def enclave_content_report(args):
+def responsibility_report(args):
 
 
     Groupings  = StanzaFactory(args,
