@@ -238,6 +238,7 @@ def mkdb(args):
 
 def ingest(args):
     """ Ingest items in the cache into databse tables """
+    # todo: rework to ingest just the file specified by the argument
     vault_files = os.path.join(archi_interface.cachepath(args), "*.sqlite")
     shlog.normal("looking into vault for %s", vault_files)
     for v in glob.glob(vault_files):

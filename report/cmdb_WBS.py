@@ -1,31 +1,25 @@
 from reports import *
 
 search = [
-          'FY2025 CMB-S4 Transient Detection Offline Data Management View',
-          'FY2025 CMB-S4 Transient Detection Online Data Management View',
-          'FY2026 CMB-S4 Transient Detection Offline Data Management View',
+          # 'FY2025 CMB-S4 Transient Detection Offline Data Management View',
+          # 'FY2025 CMB-S4 Transient Detection Online Data Management View',
+          # 'FY2026 CMB-S4 Transient Detection Offline Data Management View',
           'FY2026 CMB-S4 Transient Detection Online Data Management View '
          ]
 
 def cmdb_WBS(args):
-    Views  = StanzaFactory(args,
-"""SELECT v.ID as vID
-FROM VIEWS v
-WHERE 
-v.Name like '%s' 
-or v.Name like '%s'
-or v.Name like '%s'
-or v.Name like '%s'
-""" % (search[0],
-       search[1],
-       search[2],
-       search[3]
-      )
+    p = " or \n".join("v.Name like '" + v + "'" for v in search)
+    sql = """SELECT v.ID as vID
+                 FROM VIEWS v
+                 WHERE {}
+                 """.format(p)
+
+    Views  = StanzaFactory(args, sql
 )
 
     Views.add_report_segment(
         SegmentSQL(
-            "SELECT '' as DeleteThisRow, '' as Drawing, '' as WBS, '' as Component, '' as Description")
+            "SELECT '' as Drawing, '' as WBS, '' as Component, '' as Description")
     )
 
 
@@ -41,7 +35,7 @@ WHERE v.ID = '{vID}'
 and e.Type not like 'Grouping'"""
                              )
     Elements.add_report_segment(
-        SegmentSQL("SELECT '' as blah, '{Drawing}' as Drawing, '{WBS}' as WBS, '{Component}' as Component, '{Description}' as Description")
+        SegmentSQL("SELECT '{Drawing}' as Drawing, '{WBS}' as WBS, '{Component}' as Component, '{Description}' as Description")
     )
 
     Views.set_substanza(Elements)
