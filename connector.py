@@ -54,6 +54,19 @@ def get_connections(args):
     return connection_list
 
 
+def get_all_relations(args):
+    # return a list of html files to nuke
+    shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
+    sql = """SELECT Source, Target FROM RELATIONS"""
+    shlog.verbose(sql)
+    curs.execute(sql)
+    rows = curs.fetchall()
+    element_list = [[x[0], x[1]] for x in rows]
+    return element_list
+
+
 def get_elements(args):
     # return a list of html files to nuke
     shlog.normal("about to open %s", args.dbfile)
@@ -68,7 +81,7 @@ def get_elements(args):
                  FROM FOLDER f
                  INNER JOIN VIEWS v on v.Parent_folder_id = f.Id
                  INNER JOIN VIEW_OBJECTS vo on v.Id = vo.View_id
-                 WHERE f.Depth like '%F1LL3R%'""".replace('F1LL3R', str(args.search_term))
+                 WHERE f.Depth like '%{}%'""".format(str(args.search_term))
 
     shlog.verbose(sql)
     curs.execute(sql)
@@ -131,7 +144,7 @@ def get_elem_name(args, elem):
     # this query returns the name of the supplied element ID
     sql = """SELECT Name
              FROM ELEMENTS
-             WHERE ID = 'F1LL3R'""".replace('F1LL3R', elem)
+             WHERE ID = '{}'""".format(elem)
     # shlog.verbose(sql)
     curs.execute(sql)
     rows = curs.fetchall()
