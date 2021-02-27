@@ -6,9 +6,7 @@ import networkx as nx
 
 def get_connections(args):
     # return a list of html files to nuke
-    shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all connections that have their paths matched with args.search_term
     if args.search_term is None:
         # get all unique relations if no search_term flag had been passed
@@ -48,30 +46,35 @@ def get_connections(args):
                  INNER JOIN ELEMENTS e1 on e1.ID = r.Source
 				 INNER JOIN ELEMENTS e2 on e2.ID = r.Target
                  WHERE f.Depth LIKE '%F1LL3R%' AND e1.Type <> 'Contract' AND e2.Type <> 'Contract'""".replace('F1LL3R', str(args.search_term))
+
+    connection_list = mini_q(args, sql)
+    return connection_list
+
+
+def mini_q(args, sql):
+    # i've learned to code better
+    # so this exists
+    shlog.normal("about to open %s", args.dbfile)
+    con = sqlite3.connect(args.dbfile)
+    curs = con.cursor()
     shlog.verbose(sql)
     curs.execute(sql)
-    connection_list = curs.fetchall()
-    return connection_list
+    return curs.fetchall()
 
 
 def get_all_relations(args):
     # return a list of html files to nuke
-    shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     sql = """SELECT Source, Target FROM RELATIONS"""
-    shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+
+    rows = mini_q(args, sql)
     element_list = [[x[0], x[1]] for x in rows]
     return element_list
 
 
 def get_elements(args):
     # return a list of html files to nuke
-    shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     if args.search_term is None:
         # get all relations if no search_term flag had been passed
         sql = """SELECT Id
@@ -83,9 +86,8 @@ def get_elements(args):
                  INNER JOIN VIEW_OBJECTS vo on v.Id = vo.View_id
                  WHERE f.Depth like '%{}%'""".format(str(args.search_term))
 
-    shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+
+    rows = mini_q(args, sql)
     element_list = [x[0] for x in rows]
     return element_list
 
@@ -139,15 +141,13 @@ def get_elem_name(args, elem):
     # shlog.normal("about to open %s", args.dbfile)
     if elem is None:
         return 'None'
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns the name of the supplied element ID
     sql = """SELECT Name
              FROM ELEMENTS
              WHERE ID = '{}'""".format(elem)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         elem_name = rows[0][0]
@@ -159,15 +159,13 @@ def get_elem_name(args, elem):
 def get_elem_type(args, elem):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all views that have their paths matched with args.searchterm
     sql = """SELECT Type
              FROM ELEMENTS
              WHERE ID = 'F1LL3R'""".replace('F1LL3R', elem)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         elem_type = rows[0][0]
@@ -179,16 +177,14 @@ def get_elem_type(args, elem):
 def get_elem_eras(args, elem):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all views that have their paths matched with args.searchterm
     sql = """SELECT DISTINCT p.Value
              FROM ELEMENTS e
 			 INNER JOIN PROPERTIES p on p.Id = e.Id and p.Key = 'Era'
              WHERE e.ID = 'F1LL3R'""".replace('F1LL3R', elem)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         node_list = [x[0] for x in rows]
@@ -200,14 +196,12 @@ def get_elem_eras(args, elem):
 def get_all_eras(args):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all views that have their paths matched with args.searchterm
     sql = """SELECT EraID
              FROM ERAS"""
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         era_list = [x[0] for x in rows]
@@ -219,15 +213,13 @@ def get_all_eras(args):
 def get_era_triggers(args, era):
     # make a sql request to get element name though it's ID
     # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all views that have their paths matched with args.searchterm
     sql = """SELECT Fires
              FROM ERAS
              WHERE EraID = '%s'""" % era
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         triggers = int(rows[0][0])
@@ -239,17 +231,15 @@ def get_connection_info(args, source, target):
     # make a sql request to get info about the relation
     # make a sql request to get volume of information passed in an era
     # shlog.normal("about to open %s", args.dbfile)
-    con = sqlite3.connect(args.dbfile)
-    curs = con.cursor()
+
     # this query returns all views that have their paths matched with args.searchterm
     sql = """SELECT Type, Name
              FROM RELATIONS
              WHERE (Source = 'F1LL3R1' AND Target = 'F1LL3R2')
              or (Source = 'F1LL3R2' AND Target = 'F1LL3R1')
              LIMIT 1""".replace('F1LL3R1', source).replace('F1LL3R2', target)
-    # shlog.verbose(sql)
-    curs.execute(sql)
-    rows = curs.fetchall()
+    #
+    rows = mini_q(args, sql)
     # should return one element
     try:
         volume = rows[0]
