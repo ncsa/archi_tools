@@ -117,9 +117,9 @@ More specifically, the output can be broken down as such:
 * B1, B2, and B3 are the row content returned by StanzaFactory #1 report segment.
 * C is the output of the StanzaFactory #2 (a substanza of StanzaFactory #1) query. It is not rendered to the excel sheet; however, it can be referenced by other queries by encasing its column names in curly brackets: {}. Typically, reports only need one column; however, more are supported.
 * D1, D2, and D3 are the row content returned by StanzaFactory #2 report segment.
-* E1, E2, and E3 are the output of the context query of the contexted report segment of StanzaFactory #1. These values will be collected only for the [investigate]
-* F1, F2, and F3 are the row content returned by the contexted report segment of StanzaFactory #1
-* G1, G2, and G3 are the row content of the contexted report segment of StanzaFactory #2 (a substanza of StanzaFactory #1).
+* E1, E2, and E3 are the output of the context query of the *contexted* report segment of StanzaFactory #1. These values will be collected only for the fist context query run.
+* F1, F2, and F3 are the row content returned by the *contexted* report segment of StanzaFactory #1
+* G1, G2, and G3 are the row content of the *contexted* report segment of StanzaFactory #2 (a substanza of StanzaFactory #1).
 * X1, X2, and X3 are column names of the query that had returned B1, B2, and B3. Only the very first report segment that is generated will have its column names harvested.
 
 

@@ -2,7 +2,7 @@ from reports import *
 
 search = [
           # 'FY2025 CMB-S4 Transient Detection Offline Data Management View',
-          # 'FY2025 CMB-S4 Transient Detection Online Data Management View',
+          'FY2025 CMB-S4 Transient Detection Online Data Management View',
           # 'FY2026 CMB-S4 Transient Detection Offline Data Management View',
           'FY2026 CMB-S4 Transient Detection Online Data Management View '
          ]
