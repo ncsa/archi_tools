@@ -330,7 +330,7 @@ def ingest_properties(args, sqldbfile):
              /*Properties for elements and folder that no longer exist will not be retrieved in report queries as long as INNER JOIN is used*/
              WITH properties_prep(parent_ID, name, max_parent_version) as (SELECT parent_ID, name, max(parent_version) as max_parent_version
              FROM properties
-             GROUP BY parent_ID, rank)
+             GROUP BY parent_ID, pos)
              SELECT pp.parent_ID, pp.name, p.value
              FROM properties p
 			 INNER JOIN properties_prep pp on pp.max_parent_version = p.parent_version and pp.name=p.name and pp.parent_id = p.parent_id
